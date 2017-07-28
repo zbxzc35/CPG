@@ -19,6 +19,7 @@ import uuid
 from voc_eval import voc_eval, voc_eval_corloc, voc_eval_visualization
 from configure import cfg
 import PIL
+import cv2
 
 
 class pascal_voc(imdb):
@@ -247,6 +248,23 @@ class pascal_voc(imdb):
                 obj_i += 1
 
             assert obj_i == num_objs
+
+            # Show Pseudo GT boxes
+            im = cv2.imread(self.image_path_at(im_i))
+            print boxes
+            for obj_i in range(num_objs):
+                cv2.rectangle(
+                    im,
+                    (boxes[obj_i][0],
+                     boxes[obj_i][1]),
+                    (boxes[obj_i][2],
+                     boxes[obj_i][3]),
+                    (255,
+                     0,
+                     0),
+                    5)
+            cv2.imshow('im',im)
+            cv2.waitKey()
 
             gt_roidb.append(
                 {'boxes': boxes,
