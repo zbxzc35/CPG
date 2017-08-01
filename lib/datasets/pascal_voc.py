@@ -250,21 +250,21 @@ class pascal_voc(imdb):
             assert obj_i == num_objs
 
             # Show Pseudo GT boxes
-            im = cv2.imread(self.image_path_at(im_i))
-            print boxes
-            for obj_i in range(num_objs):
-                cv2.rectangle(
-                    im,
-                    (boxes[obj_i][0],
-                     boxes[obj_i][1]),
-                    (boxes[obj_i][2],
-                     boxes[obj_i][3]),
-                    (255,
-                     0,
-                     0),
-                    5)
-            cv2.imshow('im',im)
-            cv2.waitKey()
+            # im = cv2.imread(self.image_path_at(im_i))
+            # print boxes
+            # for obj_i in range(num_objs):
+                # cv2.rectangle(
+                    # im,
+                    # (boxes[obj_i][0],
+                     # boxes[obj_i][1]),
+                    # (boxes[obj_i][2],
+                     # boxes[obj_i][3]),
+                    # (255,
+                     # 0,
+                     # 0),
+                    # 5)
+            # cv2.imshow('im',im)
+            # cv2.waitKey()
 
             gt_roidb.append(
                 {'boxes': boxes,
@@ -368,6 +368,21 @@ class pascal_voc(imdb):
         return roidb
 
     def _load_edge_boxes_roidb(self, gt_roidb):
+        filename = os.path.abspath(os.path.join(cfg.DATA_DIR,
+                                                'EdgeBoxes_' +
+                                                self.name + '.mat'))
+        assert os.path.exists(filename), \
+            'Edge boxes data not found at: {}'.format(filename)
+        raw_data = sio.loadmat(filename)['boxes'].ravel()
+
+        box_list = []
+        for i in xrange(raw_data.shape[0]):
+            box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
+
+        return self.create_roidb_from_box_list(box_list, gt_roidb, None)
+
+
+    def _load_edge_boxes_roidb_orig(self, gt_roidb):
         filename = os.path.abspath(os.path.join(cfg.DATA_DIR,
                                                 'EdgeBoxes70_' +
                                                 self.name + '.mat'))
