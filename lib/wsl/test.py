@@ -437,7 +437,7 @@ def save_debug_im(im, target_size, save_path):
     cv2.imwrite(save_path, im_save)
 
 
-def test_net(net, imdb, max_per_image=10000, thresh=0.000000001, vis=False):
+def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
     """Test a network on an image database."""
     print 'max_per_image: ', max_per_image
     print 'thresh: ', thresh

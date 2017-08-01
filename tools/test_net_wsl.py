@@ -54,7 +54,7 @@ def parse_args():
                         action='store_true')
     parser.add_argument('--num_dets', dest='max_per_image',
                         help='max number of detections per image',
-                        default=100, type=int)
+                        default=10000, type=int)
 
     if len(sys.argv) == 1:
         parser.print_help()
