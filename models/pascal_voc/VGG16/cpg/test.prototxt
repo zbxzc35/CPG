@@ -2,6 +2,7 @@ name: "VGG_ILSVRC_16_layers"
 input: "data" input_shape { dim: 1 dim: 3 dim: 224 dim: 224 }
 input: "rois" input_shape { dim: 1 dim: 5 }
 input: "roi_scores" input_shape { dim: 1 }
+input: "roi_num" input_shape { dim: 1 }
 
 #-------------------------------------------------------------------------------------------------
 layer { name: "conv1_1" type: "Convolution" bottom: "data" top: "conv1_1"
@@ -52,6 +53,8 @@ layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
 #------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
+#layer { name: "roi_pool_conv5" type: "YAROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
+#	ya_roi_pooling_param { pooled_w: 7 pooled_h: 7}}
 #layer { name: "roi_pool_conv5" type: "ROIAlign" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 #	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
@@ -88,8 +91,8 @@ layer { name: "bbox_score" type: "Eltwise" bottom: "alpha_cls" bottom: "alpha_de
 	eltwise_param { operation: PROD }}
 
 #-----------------------------------POOLING-------------------------------------------------------------------
-layer { name: "cls_score" type: "GeneralPooling" bottom: "bbox_score" top: "cls_score"
-	general_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_score" type: "RoIScorePooling" bottom: "bbox_score" bottom: "roi_num" top: "cls_score"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
 
 #layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
 #	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}

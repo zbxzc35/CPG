@@ -17,6 +17,7 @@ import numpy as np
 import yaml
 from multiprocessing import Process, Queue
 import os
+import cv2
 import shutil
 
 
@@ -24,6 +25,10 @@ class RoIDataLayer(caffe.Layer):
     """Fast R-CNN data layer used for training."""
 
     def _shuffle_roidb_inds(self):
+        if cfg.TRAIN.SHUFFLE == False:
+            self._cur = 0
+            self._perm = np.arange(len(self._roidb))
+            return
         """Randomly permute the training roidb."""
         if cfg.TRAIN.ASPECT_GROUPING:
             widths = np.array([r['width'] for r in self._roidb])
@@ -134,6 +139,10 @@ class RoIDataLayer(caffe.Layer):
             self._name_to_top_map['roi_scores'] = idx
             idx += 1
 
+        top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH)
+        self._name_to_top_map['roi_num'] = idx
+        idx += 1
+
         # labels blob: R categorical labels in [0, ..., K] for K foreground
         # classes plus background
         top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH, self._num_classes)
@@ -162,6 +171,41 @@ class RoIDataLayer(caffe.Layer):
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""
         blobs = self._get_next_minibatch()
+
+        if False:
+            num_roi_vis=100
+            # channel_swap = (0, 3, 1, 2)
+            channel_swap = (0, 2, 3, 1)
+            ims_blob=blobs['data'].copy()
+            rois_blob=blobs['rois'].copy()
+
+            ims = ims_blob.transpose(channel_swap)
+            for i in range(cfg.TRAIN.IMS_PER_BATCH):
+                im=ims[i]
+                im += cfg.PIXEL_MEANS
+                im = im.astype(np.uint8).copy()
+
+                height=im.shape[0]
+                width=im.shape[1]
+
+                num_img_roi=0
+                for j in range(rois_blob.shape[0]):
+                    roi=rois_blob[j]
+                    if roi[0] != i:
+                        continue
+                    num_img_roi+=1
+                    if num_img_roi>num_roi_vis:
+                        break
+                    x1=int(roi[1]*width)
+                    y1=int(roi[2]*height)
+                    x2=int(roi[3]*width)
+                    y2=int(roi[4]*height)
+                    cv2.rectangle(im,(x1,y1),(x2,y2),(0,0,255),1)
+
+                cv2.imshow('image '+str(i),im)
+            cv2.waitKey(0)
+
+
 
         for blob_name, blob in blobs.iteritems():
             top_ind = self._name_to_top_map[blob_name]
@@ -195,6 +239,10 @@ class BlobFetcher(Process):
         self._shuffle_roidb_inds()
 
     def _shuffle_roidb_inds(self):
+        if cfg.TRAIN.SHUFFLE == False:
+            self._cur = 0
+            self._perm = np.arange(len(self._roidb))
+            return
         """Randomly permute the training roidb."""
         # TODO(rbg): remove duplicated code
         if cfg.TRAIN.ASPECT_GROUPING:

@@ -90,6 +90,8 @@ __C.TRAIN.ASPECT_GROUPING = True
 
 __C.TRAIN.PASS_IM = 0
 
+__C.TRAIN.SHUFFLE = True
+
 #
 # Testing options
 #

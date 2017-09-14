@@ -43,8 +43,9 @@ def get_minibatch(roidb, num_classes, db_inds):
     rois_blob = np.zeros((0, 5), dtype=np.float32)
     rois_context_blob = np.zeros((0, 9), dtype=np.float32)
     rois_frame_blob = np.zeros((0, 9), dtype=np.float32)
-    labels_blob = np.zeros((0, num_classes), dtype=np.float32)
     rois_scores_blob = np.zeros((0, 1), dtype=np.float32)
+    rois_num_blob = np.zeros((0, 1), dtype=np.float32)
+    labels_blob = np.zeros((0, num_classes), dtype=np.float32)
     opg_filter_blob = np.zeros((0, num_classes), dtype=np.float32)
     opg_io_blob = np.zeros((0, 1), dtype=np.float32)
     for i_im in xrange(num_images):
@@ -174,6 +175,10 @@ def get_minibatch(roidb, num_classes, db_inds):
             rois_scores_blob = np.vstack((rois_scores_blob, np.zeros(
                 (rois_per_this_image, 1), dtype=np.float32)))
 
+        im_roi_num = np.ones((1))
+        im_roi_num[0]=rois.shape[0]
+        rois_num_blob = np.vstack((rois_num_blob, im_roi_num))
+
         # Add to labels
         if cfg.USE_BG:
             im_labels = np.hstack((im_labels, [1.0]))
@@ -193,6 +198,9 @@ def get_minibatch(roidb, num_classes, db_inds):
             rois_scores_blob, [rois_scores_blob.shape[0]]), 1)
     else:
         blobs['roi_scores'] = np.ones((rois_blob.shape[0]), dtype=np.float32)
+
+    blobs['roi_num'] = rois_num_blob
+
     blobs['labels'] = labels_blob
     if cfg.TRAIN.OPG_CACHE:
         blobs['opg_filter'] = opg_filter_blob
@@ -202,6 +210,7 @@ def get_minibatch(roidb, num_classes, db_inds):
     # print "rois_context_blob: ", rois_context_blob
     # print "rois_frame_blob: ", rois_frame_blob
     # print "rois_scores_blob: ", rois_scores_blob
+    # print "rois_num_blob: ", rois_num_blob
     # print "labels_blob: ", labels_blob
 
     if cfg.TRAIN.ROI_AU:
@@ -332,7 +341,15 @@ def _project_im_rois(im_rois, im_scale_factor, im_crop):
     crop = np.tile(im_crop[:2], [im_rois.shape[0], 2])
     rois = (im_rois - crop) * im_scale_factor
 
-    # TODO(YH): 为什么大部分RoI会被caffe抛弃
+    # For YAROIPooling Layer
+    # rois = (im_rois - crop)
+    # width=im_crop[2]-im_crop[0]
+    # height=im_crop[3]-im_crop[1]
+    # rois[:,0] =rois[:,0]/ width
+    # rois[:,1] =rois[:,1]/ height
+    # rois[:,2] =rois[:,2]/ width
+    # rois[:,3] =rois[:,3]/ height
+
     return rois
 
 

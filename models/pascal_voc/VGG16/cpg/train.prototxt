@@ -1,5 +1,5 @@
 name: "VGG_ILSVRC_16_layers"
-layer {	name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'labels'
+layer { name: 'data' type: 'Python' top: 'data' top: 'rois' top: 'roi_scores' top: 'roi_num' top: 'labels'
 	#top: 'opg_filter' top: 'opg_io'
 	python_param { module: 'roi_data_layer.layer_wsl' layer: 'RoIDataLayer' param_str: "'num_classes': 20" }}
 
@@ -65,6 +65,8 @@ layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
 #------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
+#layer { name: "roi_pool_conv5" type: "YAROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
+#	ya_roi_pooling_param { pooled_w: 7 pooled_h: 7}}
 #layer { name: "roi_pool_conv5" type: "ROIAlign" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 #	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
@@ -105,8 +107,8 @@ layer { name: "bbox_score" type: "Eltwise" bottom: "alpha_cls" bottom: "alpha_de
 	eltwise_param { operation: PROD }}
 
 #-----------------------------------POOLING-------------------------------------------------------------------
-layer { name: "cls_score" type: "GeneralPooling" bottom: "bbox_score" top: "cls_score"
-	general_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_score" type: "RoIScorePooling" bottom: "bbox_score" bottom: "roi_num" top: "cls_score"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
 
 #layer { name: "loss_cls" type: "CrossEntropyLoss" bottom: "cls_score" bottom: "labels" top: "loss_cls" loss_weight: 1
 #	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
@@ -136,8 +138,10 @@ layer { name: "pos_constraint" type: "PolarConstraint" bottom: "bbox_score" bott
 layer { name: "neg_constraint" type: "PolarConstraint" bottom: "bbox_score" bottom: "opg_roi_select"
 	top: "score_neg" propagate_down: true propagate_down: false polar_constraint_param { polar: false }}
 
-layer { name: "cls_pos" type: "GeneralPooling" bottom: "score_pos" top: "cls_pos" general_pooling_param { pool: SUM axis: 0 }}
-layer { name: "cls_neg" type: "GeneralPooling" bottom: "score_neg" top: "cls_neg" general_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_pos" type: "RoIScorePooling" bottom: "score_pos" bottom: "roi_num" top: "cls_pos"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
+layer { name: "cls_neg" type: "RoIScorePooling" bottom: "score_neg" bottom: "roi_num" top: "cls_neg"
+	roi_score_pooling_param { pool: SUM axis: 0 }}
 
 #-----------------------------------LOSS----------------------------------------------------------------------
 layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "labels_pos" top: "loss_pos" loss_weight: 1
