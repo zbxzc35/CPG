@@ -19,7 +19,7 @@ from utils.blob import im_list_to_blob
 import os
 import time
 import pprint
-from roi_data_layer.minibatch_wsl import get_inner_outer_rois
+from roi_data_layer_wsl.minibatch import get_inner_outer_rois
 
 
 def _get_image_blob(im):

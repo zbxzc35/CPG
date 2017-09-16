@@ -1,0 +1,18 @@
+TRAIN:
+        SCALES: [300]
+        MAX_SIZE: 300
+        IMS_PER_BATCH: 32
+        ROIS_PER_IM: 2048
+        USE_CROP: True
+        USE_DISTORTION: True
+        SNAPSHOT_ITERS: 1
+        USE_PREFETCH: True
+        ASPECT_GROUPING: False
+
+TEST:
+        SCALES: [300]
+        MAX_SIZE: 2000
+        NMS: 0.5
+
+RNG_SEED: 6
+EXP_DIR: ssd
