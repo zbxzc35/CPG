@@ -12,7 +12,7 @@ RoIDataLayer implements a Caffe Python layer.
 
 import caffe
 from configure import cfg
-from roi_data_layer.minibatch_wsl import get_minibatch
+from roi_data_layer_wsl.minibatch import get_minibatch
 import numpy as np
 import yaml
 from multiprocessing import Process, Queue
@@ -103,7 +103,7 @@ class RoIDataLayer(caffe.Layer):
         """Setup the RoIDataLayer."""
 
         # parse the layer parameter string, which must be valid YAML
-        layer_params = yaml.load(self.param_str_)
+        layer_params = yaml.load(self.param_str)
 
         self._num_classes = layer_params['num_classes']
 

@@ -6,7 +6,6 @@
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick
 # --------------------------------------------------------
-
 """Compute minibatch blobs for training a Fast R-CNN network."""
 
 import numpy as np
@@ -24,8 +23,8 @@ def get_minibatch(roidb, num_classes, db_inds):
     """Given a roidb, construct a minibatch sampled from it."""
     num_images = len(roidb)
     # Sample random scales to use for each image in this batch
-    random_scale_inds = npr.randint(0, high=len(cfg.TRAIN.SCALES),
-                                    size=num_images)
+    random_scale_inds = npr.randint(
+        0, high=len(cfg.TRAIN.SCALES), size=num_images)
     # rois_per_image = cfg.TRAIN.ROIS_PER_IM
 
     # Get the input image blob, formatted for caffe
@@ -66,11 +65,11 @@ def get_minibatch(roidb, num_classes, db_inds):
         # im_roi_scores = im_roi_scores[~drop]
 
         # Check RoI
-        datasets.ds_utils.validate_boxes(im_rois, width=im_shapes[i_im][
-                                         1], height=im_shapes[i_im][0])
+        datasets.ds_utils.validate_boxes(
+            im_rois, width=im_shapes[i_im][1], height=im_shapes[i_im][0])
 
-        rois_per_this_image = np.minimum(
-            cfg.TRAIN.ROIS_PER_IM, im_rois.shape[0])
+        rois_per_this_image = np.minimum(cfg.TRAIN.ROIS_PER_IM,
+                                         im_rois.shape[0])
         im_rois = im_rois[:rois_per_this_image, :]
         if cfg.USE_ROI_SCORE:
             im_roi_scores = im_roi_scores[:rois_per_this_image]
@@ -83,8 +82,8 @@ def get_minibatch(roidb, num_classes, db_inds):
                     continue
                 filter_name = str(db_inds[i_im] * 10000 + target_size)
                 # print filter_name
-                filter_path = os.path.join(
-                    cfg.TRAIN.OPG_CACHE_PATH, filter_name)
+                filter_path = os.path.join(cfg.TRAIN.OPG_CACHE_PATH,
+                                           filter_name)
 
                 if os.path.exists(filter_path):
                     filter_this = cpg.cpg_utils.binaryfile_to_blobproto_to_array(
@@ -95,10 +94,14 @@ def get_minibatch(roidb, num_classes, db_inds):
                     # filter_blob_this = np.add(
                     # filter_blob_this,
                     # cpg.cpg_utils.binaryfile_to_blobproto_to_array(filter_path)).astype(np.float32)
-                    filter_blob_this = np.maximum(
-                        filter_blob_this, filter_this)
+                    filter_blob_this = np.maximum(filter_blob_this,
+                                                  filter_this)
             io_blob_this = np.array(
-                [db_inds[i_im] * 10000 + cfg.TRAIN.SCALES[random_scale_inds[i_im]]], dtype=np.float32)
+                [
+                    db_inds[i_im] * 10000 +
+                    cfg.TRAIN.SCALES[random_scale_inds[i_im]]
+                ],
+                dtype=np.float32)
 
             opg_filter_blob = np.vstack((opg_filter_blob, filter_blob_this))
             opg_io_blob = np.vstack((opg_io_blob, io_blob_this))
@@ -114,7 +117,8 @@ def get_minibatch(roidb, num_classes, db_inds):
             else:
                 au_ind = np.ones(rois_per_this_image, dtype=np.bool)
             offsets = np.random.randint(
-                2 * offset_step + 1, size=(np.sum(au_ind), 4)).astype(np.float32)
+                2 * offset_step + 1, size=(np.sum(au_ind),
+                                           4)).astype(np.float32)
             offsets -= offset_step
             offsets *= offset
 
@@ -150,24 +154,24 @@ def get_minibatch(roidb, num_classes, db_inds):
         # project
         rois = _project_im_rois(im_rois, im_scales[i_im], im_crop)
         if cfg.CONTEXT:
-            rois_inner = _project_im_rois(
-                im_inner_rois, im_scales[i_im], im_crop)
-            rois_outer = _project_im_rois(
-                im_outer_rois, im_scales[i_im], im_crop)
+            rois_inner = _project_im_rois(im_inner_rois, im_scales[i_im],
+                                          im_crop)
+            rois_outer = _project_im_rois(im_outer_rois, im_scales[i_im],
+                                          im_crop)
 
         batch_ind = i_im * np.ones((rois.shape[0], 1))
         rois_blob_this_image = np.hstack((batch_ind, rois))
         rois_blob = np.vstack((rois_blob, rois_blob_this_image))
         if cfg.CONTEXT:
-            rois_context_blob_this_image = np.hstack(
-                (batch_ind, rois_outer, rois))
-            rois_context_blob = np.vstack(
-                (rois_context_blob, rois_context_blob_this_image))
+            rois_context_blob_this_image = np.hstack((batch_ind, rois_outer,
+                                                      rois))
+            rois_context_blob = np.vstack((rois_context_blob,
+                                           rois_context_blob_this_image))
 
-            rois_frame_blob_this_image = np.hstack(
-                (batch_ind, rois, rois_inner))
-            rois_frame_blob = np.vstack(
-                (rois_frame_blob, rois_frame_blob_this_image))
+            rois_frame_blob_this_image = np.hstack((batch_ind, rois,
+                                                    rois_inner))
+            rois_frame_blob = np.vstack((rois_frame_blob,
+                                         rois_frame_blob_this_image))
 
         if cfg.USE_ROI_SCORE:
             rois_scores_blob = np.vstack((rois_scores_blob, im_roi_scores))
@@ -176,7 +180,7 @@ def get_minibatch(roidb, num_classes, db_inds):
                 (rois_per_this_image, 1), dtype=np.float32)))
 
         im_roi_num = np.ones((1))
-        im_roi_num[0]=rois.shape[0]
+        im_roi_num[0] = rois.shape[0]
         rois_num_blob = np.vstack((rois_num_blob, im_roi_num))
 
         # Add to labels
@@ -194,8 +198,8 @@ def get_minibatch(roidb, num_classes, db_inds):
 
     if cfg.USE_ROI_SCORE:
         # n * 1 to n
-        blobs['roi_scores'] = np.add(np.reshape(
-            rois_scores_blob, [rois_scores_blob.shape[0]]), 1)
+        blobs['roi_scores'] = np.add(
+            np.reshape(rois_scores_blob, [rois_scores_blob.shape[0]]), 1)
     else:
         blobs['roi_scores'] = np.ones((rois_blob.shape[0]), dtype=np.float32)
 
@@ -255,11 +259,9 @@ def _get_image_blob(roidb, scale_inds, db_inds):
             s = im_shape[:2] - crop_dims
             s[0] *= r0
             s[1] *= r1
-            im_crop = np.array([s[0],
-                                s[1],
-                                s[0] + crop_dims[0] - 1,
-                                s[1] + crop_dims[1] - 1],
-                               dtype=np.uint16)
+            im_crop = np.array(
+                [s[0], s[1], s[0] + crop_dims[0] - 1, s[1] + crop_dims[1] - 1],
+                dtype=np.uint16)
 
             im = im[im_crop[0]:im_crop[2] + 1, im_crop[1]:im_crop[3] + 1, :]
         else:
@@ -274,8 +276,13 @@ def _get_image_blob(roidb, scale_inds, db_inds):
                                         cfg.TRAIN.MAX_SIZE)
 
         if cfg.OPG_DEBUG:
-            im_save = cv2.resize(im_save, None, None, fx=im_scale, fy=im_scale,
-                                 interpolation=cv2.INTER_LINEAR)
+            im_save = cv2.resize(
+                im_save,
+                None,
+                None,
+                fx=im_scale,
+                fy=im_scale,
+                interpolation=cv2.INTER_LINEAR)
             cv2.imwrite('tmp/' + str(cfg.TRAIN.PASS_IM) + '_.png', im_save)
             cfg.TRAIN.PASS_IM = cfg.TRAIN.PASS_IM + 1
 
@@ -330,25 +337,25 @@ def get_inner_outer_rois(im_rois, ratio):
 
 def _project_im_rois(im_rois, im_scale_factor, im_crop):
     """Project image RoIs into the rescaled training image."""
-    im_rois[:, 0] = np.minimum(np.maximum(
-        im_rois[:, 0], im_crop[0]), im_crop[2])
-    im_rois[:, 1] = np.minimum(np.maximum(
-        im_rois[:, 1], im_crop[1]), im_crop[3])
-    im_rois[:, 2] = np.maximum(np.minimum(
-        im_rois[:, 2], im_crop[2]), im_crop[0])
-    im_rois[:, 3] = np.maximum(np.minimum(
-        im_rois[:, 3], im_crop[3]), im_crop[1])
+    im_rois[:, 0] = np.minimum(
+        np.maximum(im_rois[:, 0], im_crop[0]), im_crop[2])
+    im_rois[:, 1] = np.minimum(
+        np.maximum(im_rois[:, 1], im_crop[1]), im_crop[3])
+    im_rois[:, 2] = np.maximum(
+        np.minimum(im_rois[:, 2], im_crop[2]), im_crop[0])
+    im_rois[:, 3] = np.maximum(
+        np.minimum(im_rois[:, 3], im_crop[3]), im_crop[1])
     crop = np.tile(im_crop[:2], [im_rois.shape[0], 2])
     rois = (im_rois - crop) * im_scale_factor
 
     # For YAROIPooling Layer
     # rois = (im_rois - crop)
-    # width=im_crop[2]-im_crop[0]
-    # height=im_crop[3]-im_crop[1]
-    # rois[:,0] =rois[:,0]/ width
-    # rois[:,1] =rois[:,1]/ height
-    # rois[:,2] =rois[:,2]/ width
-    # rois[:,3] =rois[:,3]/ height
+    # width = im_crop[2] - im_crop[0]
+    # height = im_crop[3] - im_crop[1]
+    # rois[:, 0] = rois[:, 0] / width
+    # rois[:, 1] = rois[:, 1] / height
+    # rois[:, 2] = rois[:, 2] / width
+    # rois[:, 3] = rois[:, 3] / height
 
     return rois
 
@@ -379,10 +386,13 @@ def _vis_minibatch(im_blob, rois_blob, labels_blob):
             roi = rois[1:]
             # print 'class: ', cls, ' overlap: ', overlaps[i]
             plt.gca().add_patch(
-                plt.Rectangle((roi[0], roi[1]), roi[2] - roi[0],
-                              roi[3] - roi[1], fill=False,
-                              edgecolor='r', linewidth=1)
-            )
+                plt.Rectangle(
+                    (roi[0], roi[1]),
+                    roi[2] - roi[0],
+                    roi[3] - roi[1],
+                    fill=False,
+                    edgecolor='r',
+                    linewidth=1))
         plt.show()
         plt.close('all')
 

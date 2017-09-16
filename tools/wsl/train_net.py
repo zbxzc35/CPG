@@ -10,8 +10,7 @@
 """Train a Fast R-CNN network on a region of interest database."""
 
 import _init_paths
-from fast_rcnn.train import get_training_roidb
-from wsl.train import train_net
+from wsl.train import get_training_roidb, train_net
 from wsl.config import cfg_wsl
 from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
 from configure import get_output_dir,get_vis_dir

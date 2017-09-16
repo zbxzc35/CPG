@@ -9,6 +9,7 @@
 
 import caffe
 from configure import cfg
+import roi_data_layer_wsl.roidb as rdlw_roidb
 from utils.timer import Timer
 import numpy as np
 import os
@@ -109,6 +110,19 @@ class SolverWrapper(object):
         if last_snapshot_iter != self.solver.iter:
             model_paths.append(self.snapshot())
         return model_paths
+
+def get_training_roidb(imdb):
+    """Returns a roidb (Region of Interest database) for use in training."""
+    if cfg.TRAIN.USE_FLIPPED:
+        print 'Appending horizontally-flipped training examples...'
+        imdb.append_flipped_images()
+        print 'done'
+
+    print 'Preparing training data...'
+    rdlw_roidb.prepare_roidb(imdb)
+    print 'done'
+
+    return imdb.roidb
 
 
 def train_net(solver_prototxt, roidb, output_dir,
