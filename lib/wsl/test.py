@@ -19,7 +19,7 @@ from utils.blob import im_list_to_blob
 import os
 import time
 import pprint
-from roi_data_layer_wsl.minibatch import get_inner_outer_rois
+from wsl_roi_data_layer.minibatch import get_inner_outer_roi
 
 
 def _get_image_blob(im):
@@ -80,7 +80,7 @@ def _get_rois_blob(im_rois, im_scale_factors):
 
 
 def _get_context_rois_blob(im_rois, im_scale_factors):
-    im_inner_rois, im_outer_rois = get_inner_outer_rois(
+    im_inner_rois, im_outer_rois = get_inner_outer_roi(
         im_rois, cfg.CONTEXT_RATIO)
 
     rois_inner, levels = _project_im_rois(im_inner_rois, im_scale_factors)

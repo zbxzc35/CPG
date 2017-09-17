@@ -51,12 +51,127 @@ __C.TRAIN.ROIS_PER_IM = 10000
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
 
-__C.TRAIN.USE_CROP = False
-__C.TRAIN.CROP = 0.9
+# __C.TRAIN.USE_CROP = True
+# __C.TRAIN.CROP = 0.9
 
-__C.TRAIN.USE_DISTORTION = False
-__C.TRAIN.EXPOSURE = 1.5
-__C.TRAIN.SATURATION = 1.5
+__C.TRAIN.USE_DISTORTION = True
+__C.TRAIN.brightness_prob = 0.5
+__C.TRAIN.brightness_delta = 32
+__C.TRAIN.contrast_prob = 0.5
+__C.TRAIN.contrast_lower = 0.5
+__C.TRAIN.contrast_upper = 1.5
+__C.TRAIN.hue_prob = 0.5
+__C.TRAIN.hue_delta = 18
+__C.TRAIN.saturation_prob = 0.5
+__C.TRAIN.saturation_lower = 0.5
+__C.TRAIN.saturation_upper = 1.5
+__C.TRAIN.random_order_prob = 0.0
+
+__C.TRAIN.USE_EXPAND = True
+__C.TRAIN.expand_prob = 0.5
+__C.TRAIN.max_expand_ratio = 4.0
+
+__C.TRAIN.USE_SAMPLE = True
+__C.TRAIN.batch_sampler = [
+    edict({
+        'sampler': {
+            'min_scale': 1.0,
+            'max_scale': 1.0,
+            'min_aspect_ratio': 1.0,
+            'max_aspect_ratio': 1.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.0,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 1,
+        'max_sample': 1,
+    }),
+    edict({
+        'sampler': {
+            'min_scale': 0.3,
+            'max_scale': 1.0,
+            'min_aspect_ratio': 0.5,
+            'max_aspect_ratio': 2.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.1,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 50,
+        'max_sample': 1,
+    }),
+    edict({
+        'sampler': {
+            'min_scale': 0.3,
+            'max_scale': 1.0,
+            'min_aspect_ratio': 0.5,
+            'max_aspect_ratio': 2.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.3,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 50,
+        'max_sample': 1,
+    }),
+    edict({
+        'sampler': {
+            'min_scale': 0.3,
+            'max_scale': 1.0,
+            'min_aspect_ratio': 0.5,
+            'max_aspect_ratio': 2.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.5,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 50,
+        'max_sample': 1,
+    }),
+    edict({
+        'sampler': {
+            'min_scale': 0.3,
+            'max_scale': 1.0,
+            'min_aspect_ratio': 0.5,
+            'max_aspect_ratio': 2.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.7,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 50,
+        'max_sample': 1,
+    }),
+    edict({
+        'sampler': {
+            'min_scale': 0.3,
+            'max_scale': 1.0,
+            'min_aspect_ratio': 0.5,
+            'max_aspect_ratio': 2.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.9,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 50,
+        'max_sample': 1,
+    }),
+    edict({
+        'sampler': {
+            'min_scale': 0.3,
+            'max_scale': 1.0,
+            'min_aspect_ratio': 0.5,
+            'max_aspect_ratio': 2.0,
+        },
+        'sample_constraint': {
+            'min_jaccard_overlap': 0.9,
+            'max_jaccard_overlap': 1.0,
+        },
+        'max_trials': 50,
+        'max_sample': 1,
+    }),
+]
 
 __C.TRAIN.ROI_AU = False
 __C.TRAIN.ROI_AU_STEP = 1
@@ -90,18 +205,6 @@ __C.TRAIN.ASPECT_GROUPING = True
 __C.TRAIN.PASS_IM = 0
 
 __C.TRAIN.SHUFFLE = True
-
-__C.TRAIN.brightness_prob = 0.5
-__C.TRAIN.brightness_delta = 32
-__C.TRAIN.contrast_prob = 0.5
-__C.TRAIN.contrast_lower = 0.5
-__C.TRAIN.contrast_upper = 1.5
-__C.TRAIN.hue_prob = 0.5
-__C.TRAIN.hue_delta = 18
-__C.TRAIN.saturation_prob = 0.5
-__C.TRAIN.saturation_lower = 0.5
-__C.TRAIN.saturation_upper = 1.5
-__C.TRAIN.random_order_prob = 0.0
 
 #
 # Testing options

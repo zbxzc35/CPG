@@ -11,7 +11,7 @@ RoIDataLayer implements a Caffe Python layer.
 
 import caffe
 from configure import cfg
-from roi_data_layer.minibatch_wsl import get_minibatch
+from wsl_roi_data_layer.minibatch import get_minibatch
 import numpy as np
 import yaml
 from multiprocessing import Process, Queue
@@ -115,37 +115,37 @@ class RoIDataLayer(caffe.Layer):
         self._name_to_top_map['data'] = idx
         idx += 1
 
-        # rois blob: holds R regions of interest, each is a 5-tuple
+        # roi blob: holds R regions of interest, each is a 5-tuple
         # (n, x1, y1, x2, y2) specifying an image batch index n and a
         # rectangle (x1, y1, x2, y2)
         top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM, 5)
-        self._name_to_top_map['rois'] = idx
+        self._name_to_top_map['roi'] = idx
         idx += 1
 
         if cfg.CONTEXT:
             top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM,
                              9)
-            self._name_to_top_map['rois_context'] = idx
+            self._name_to_top_map['roi_context'] = idx
             idx += 1
 
             top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM,
                              9)
-            self._name_to_top_map['rois_frame'] = idx
+            self._name_to_top_map['roi_frame'] = idx
             idx += 1
 
         if cfg.USE_ROI_SCORE:
             top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM)
-            self._name_to_top_map['roi_scores'] = idx
+            self._name_to_top_map['roi_score'] = idx
             idx += 1
 
         top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH)
         self._name_to_top_map['roi_num'] = idx
         idx += 1
 
-        # labels blob: R categorical labels in [0, ..., K] for K foreground
+        # label blob: R categorical label in [0, ..., K] for K foreground
         # classes plus background
         top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH, self._num_classes)
-        self._name_to_top_map['labels'] = idx
+        self._name_to_top_map['label'] = idx
         idx += 1
 
         if cfg.TRAIN.OPG_CACHE and len(top) > idx:
@@ -176,7 +176,7 @@ class RoIDataLayer(caffe.Layer):
             # channel_swap = (0, 3, 1, 2)
             channel_swap = (0, 2, 3, 1)
             ims_blob = blobs['data'].copy()
-            rois_blob = blobs['rois'].copy()
+            roi_blob = blobs['roi'].copy()
 
             ims = ims_blob.transpose(channel_swap)
             for i in range(cfg.TRAIN.IMS_PER_BATCH):
@@ -188,8 +188,8 @@ class RoIDataLayer(caffe.Layer):
                 width = im.shape[1]
 
                 num_img_roi = 0
-                for j in range(rois_blob.shape[0]):
-                    roi = rois_blob[j]
+                for j in range(roi_blob.shape[0]):
+                    roi = roi_blob[j]
                     if roi[0] != i:
                         continue
                     num_img_roi += 1

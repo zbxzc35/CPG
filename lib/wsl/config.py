@@ -4,7 +4,6 @@
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick
 # --------------------------------------------------------
-
 """Fast R-CNN config system.
 
 This file specifies default config options for Fast R-CNN. You should not
@@ -35,7 +34,7 @@ __C.TRAIN = edict()
 
 # Scales to use during training (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TRAIN.SCALES = (600,)
+__C.TRAIN.SCALES = (600, )
 
 # Max pixel size of the longest side of a scaled input image
 __C.TRAIN.MAX_SIZE = 1000
@@ -56,8 +55,17 @@ __C.TRAIN.USE_CROP = False
 __C.TRAIN.CROP = 0.9
 
 __C.TRAIN.USE_DISTORTION = False
-__C.TRAIN.EXPOSURE = 1.5
-__C.TRAIN.SATURATION = 1.5
+__C.TRAIN.brightness_prob = 0.5
+__C.TRAIN.brightness_delta = 32
+__C.TRAIN.contrast_prob = 0.5
+__C.TRAIN.contrast_lower = 0.5
+__C.TRAIN.contrast_upper = 1.5
+__C.TRAIN.hue_prob = 0.5
+__C.TRAIN.hue_delta = 18
+__C.TRAIN.saturation_prob = 0.5
+__C.TRAIN.saturation_lower = 0.5
+__C.TRAIN.saturation_upper = 1.5
+__C.TRAIN.random_order_prob = 0.0
 
 __C.TRAIN.ROI_AU = False
 __C.TRAIN.ROI_AU_STEP = 1
@@ -100,7 +108,7 @@ __C.TEST = edict()
 
 # Scales to use during testing (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TEST.SCALES = (600,)
+__C.TEST.SCALES = (600, )
 
 # Max pixel size of the longest side of a scaled input image
 __C.TEST.MAX_SIZE = 1000
@@ -123,7 +131,6 @@ __C.TEST.BBOX = False
 # for grid search NMS max_per_image thresh and so on
 __C.TEST.CACHE = False
 __C.TEST.MAP = 0.0
-
 
 #
 # MISC
@@ -192,8 +199,7 @@ def get_vis_dir(imdb, net=None):
     A canonical path is built using the name from an imdb and a network
     (if not None).
     """
-    outdir = osp.abspath(
-        osp.join(__C.ROOT_DIR, 'vis', __C.EXP_DIR, imdb.name))
+    outdir = osp.abspath(osp.join(__C.ROOT_DIR, 'vis', __C.EXP_DIR, imdb.name))
     if net is not None:
         outdir = osp.join(outdir, net.name)
     if not os.path.exists(outdir):

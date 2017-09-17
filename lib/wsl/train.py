@@ -9,7 +9,7 @@
 
 import caffe
 from configure import cfg
-import roi_data_layer_wsl.roidb as rdlw_roidb
+import wsl_roi_data_layer.roidb as wrdl_roidb
 from utils.timer import Timer
 import numpy as np
 import os
@@ -119,7 +119,7 @@ def get_training_roidb(imdb):
         print 'done'
 
     print 'Preparing training data...'
-    rdlw_roidb.prepare_roidb(imdb)
+    wrdl_roidb.prepare_roidb(imdb)
     print 'done'
 
     return imdb.roidb

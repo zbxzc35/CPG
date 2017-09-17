@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-"""Compute minibatch blobs for training a Fast R-CNN network."""
-
 import numpy as np
 import numpy.random as npr
 import cv2
@@ -15,6 +7,7 @@ import os
 from configure import cfg
 from utils.blob import im_list_to_blob
 import datasets.ds_utils
+import utils.im_transforms
 
 
 def get_minibatch(roidb, num_classes):
@@ -24,40 +17,85 @@ def get_minibatch(roidb, num_classes):
     random_scale_inds = npr.randint(
         0, high=len(cfg.TRAIN.SCALES), size=num_images)
 
-    # Get the input image blob, formatted for caffe
-    # im_crops is define as RoIs with form (y1,x1,y2,x2)
-    im_blob, im_scales, im_crops, im_shapes = _get_image_blob(
-        roidb, random_scale_inds)
-
-    # row col row col to x1 y1 x2 y2
-    im_crops = np.array(im_crops, dtype=np.uint16)
-    im_crops = im_crops[:, (1, 0, 3, 2)]
-
-    blobs = {'data': im_blob}
-
+    processed_ims = []
     # Now, build the region of interest and label blobs
-    rois_blob = np.zeros((0, 8), dtype=np.float32)
+    roi_blob = np.zeros((0, 8), dtype=np.float32)
     for i_im in xrange(num_images):
+        # 处理图像
+        img = cv2.imread(roidb[i_im]['image'])
+        print i_im,roidb[i_im]['image']
+        img = img.astype(np.float32)
+        if roidb[i_im]['flipped']:
+            img = img[:, ::-1, :]
+
+        img_shape = img.shape
+
+        # 处理ROI
         # x1 y1 x2 y2
-        im_rois = roidb[i_im]['boxes'].astype(np.float32)
-
-        im_crop = im_crops[i_im]
-
-        # TODO(YH): CROP is conflict with OPG_CACHE and ROI_AU, thereforce caffe should check the validity of RoI
-        # 删除超出CROP的RoI
-        # drop = (im_rois[:, 0] >= im_crop[2]) | (im_rois[:, 1] >= im_crop[3]) | (
-        # im_rois[:, 2] <= im_crop[0]) | (im_rois[:, 3] <= im_crop[1])
-        # im_rois = im_rois[~drop]
-        # if cfg.USE_ROI_SCORE:
-        # im_roi_scores = im_roi_scores[~drop]
+        img_roi = roidb[i_im]['boxes'].astype(np.float32)
 
         # Check RoI
         datasets.ds_utils.validate_boxes(
-            im_rois, width=im_shapes[i_im][1], height=im_shapes[i_im][0])
+            img_roi, width=img_shape[1], height=img_shape[0])
 
-        rois = _project_im_rois(im_rois, im_scales[i_im], im_crop)
+        roi = _normalize_img_roi(img_roi, img_shape)
 
+        # 处理标签
         gt_classes = roidb[i_im]['gt_classes']
+        #-------------------------------------------------------------
+
+        if cfg.TRAIN.USE_DISTORTION:
+            # cv2.imshow('before distort',img.astype(np.uint8))
+            img = utils.im_transforms.ApplyDistort(img)
+            # cv2.imshow('after distort',img.astype(np.uint8))
+            # cv2.waitKey(0)
+
+        # crop_bbox is define as RoIs with form (x1,y1,x2,y2)
+        # if cfg.TRAIN.USE_CROP:
+        # img, crop_bbox = utils.im_transforms.ApplyCrop(img)
+        # else:
+        # crop_bbox = np.array(
+        # [0, 0, img.shape[0] - 1, img.shape[1] - 1], dtype=np.uint16)
+
+        # expand_bbox is define as RoIs with form (x1,y1,x2,y2)
+        if cfg.TRAIN.USE_EXPAND:
+            img, expand_bbox = utils.im_transforms.ApplyExpand(img)
+        else:
+            expand_bbox = np.array([0, 0, 1, 1], dtype=np.uint16)
+
+        roi, gt_classes = _transform_img_roi(
+            roi, gt_classes, do_crop=True, crop_bbox=expand_bbox)
+
+
+        #-------------------------------------------------------------
+        if cfg.TRAIN.USE_SAMPLE:
+            sampled_bboxes = utils.im_transforms.GenerateBatchSamples(
+                roi, img_shape)
+            if len(sampled_bboxes) > 0:
+                rand_idx = npr.randint(len(sampled_bboxes))
+                sampled_bbox = sampled_bboxes[rand_idx]
+
+                img = utils.im_transforms.Crop(img, sampled_bbox)
+                roi, gt_classes = _transform_img_roi(
+                    roi,
+                    gt_classes,
+                    do_crop=True,
+                    crop_bbox=sampled_bbox)
+
+
+        #-------------------------------------------------------------
+        target_size = cfg.TRAIN.SCALES[random_scale_inds[i_im]]
+        img, img_scale = prep_im_for_blob(img, cfg.PIXEL_MEANS, target_size,
+                                          cfg.TRAIN.MAX_SIZE)
+
+        processed_ims.append(img)
+
+        roi, gt_classes = _transform_img_roi(
+            roi,
+            gt_classes,
+            do_resize=True,
+            img_scale=img_scale,
+            img_shape=img_shape)
 
         instance_id = np.zeros_like(gt_classes)
         old_c = -1
@@ -68,99 +106,29 @@ def get_minibatch(roidb, num_classes):
             else:
                 old_c = c
 
-        gt_classes = gt_classes.reshape((rois.shape[0], 1))
-        instance_id = instance_id.reshape((rois.shape[0], 1))
+        gt_classes = gt_classes.reshape((roi.shape[0], 1))
+        instance_id = instance_id.reshape((roi.shape[0], 1))
 
+        # TODO(YH): 目前全部设置不难
         difficult = np.zeros_like(gt_classes)
 
-        batch_ind = i_im * np.ones((rois.shape[0], 1))
-        # print batch_ind, gt_classes, instance_id, rois, difficult
-        # print batch_ind.shape, gt_classes.shape, instance_id.shape, rois.shape, difficult.shape
-        rois_blob_this_image = np.hstack((batch_ind, gt_classes, instance_id,
-                                          rois, difficult))
-        rois_blob = np.vstack((rois_blob, rois_blob_this_image))
+        batch_ind = i_im * np.ones((roi.shape[0], 1))
 
-    rois_blob = np.expand_dims(rois_blob, axis=0)
-    rois_blob = np.expand_dims(rois_blob, axis=0)
-    blobs['label'] = rois_blob
-
-    return blobs
-
-
-def _get_image_blob(roidb, scale_inds):
-    """Builds an input blob from the images in the roidb at the specified
-    scales.
-    """
-    num_images = len(roidb)
-    processed_ims = []
-    im_scales = []
-    im_crops = []
-    im_shapes = []
-    for i in xrange(num_images):
-        im = cv2.imread(roidb[i]['image'])
-        im = im.astype(np.float32)
-        if roidb[i]['flipped']:
-            im = im[:, ::-1, :]
-
-        im_shapes.append(im.shape)
-
-        if cfg.TRAIN.USE_DISTORTION:
-            im = ApplyDistort(im)
-            # hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
-            # s0 = npr.random() * (cfg.TRAIN.SATURATION - 1) + 1
-            # s1 = npr.random() * (cfg.TRAIN.EXPOSURE - 1) + 1
-            # s0 = s0 if npr.random() > 0.5 else 1.0 / s0
-            # s1 = s1 if npr.random() > 0.5 else 1.0 / s1
-            # hsv = np.array(hsv, dtype=np.float)
-            # hsv[:, :, 1] = np.minimum(s0 * hsv[:, :, 1], 255)
-            # hsv[:, :, 2] = np.minimum(s1 * hsv[:, :, 2], 255)
-            # hsv = np.array(hsv, dtype=np.uint8)
-            # im = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-
-        if cfg.TRAIN.USE_CROP:
-            im_shape = np.array(im.shape)
-            crop_dims = im_shape[:2] * cfg.TRAIN.CROP
-
-            r0 = npr.random()
-            r1 = npr.random()
-            s = im_shape[:2] - crop_dims
-            s[0] *= r0
-            s[1] *= r1
-            im_crop = np.array(
-                [s[0], s[1], s[0] + crop_dims[0] - 1, s[1] + crop_dims[1] - 1],
-                dtype=np.uint16)
-
-            im = im[im_crop[0]:im_crop[2] + 1, im_crop[1]:im_crop[3] + 1, :]
-        else:
-            im_crop = np.array(
-                [0, 0, im.shape[0] - 1, im.shape[1] - 1], dtype=np.uint16)
-
-        if cfg.OPG_DEBUG:
-            im_save = im
-
-        target_size = cfg.TRAIN.SCALES[scale_inds[i]]
-        im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
-                                        cfg.TRAIN.MAX_SIZE)
-
-        if cfg.OPG_DEBUG:
-            im_save = cv2.resize(
-                im_save,
-                None,
-                None,
-                fx=im_scale,
-                fy=im_scale,
-                interpolation=cv2.INTER_LINEAR)
-            cv2.imwrite('tmp/' + str(cfg.TRAIN.PASS_IM) + '_.png', im_save)
-            cfg.TRAIN.PASS_IM = cfg.TRAIN.PASS_IM + 1
-
-        im_scales.append(im_scale)
-        im_crops.append(im_crop)
-        processed_ims.append(im)
+        # print batch_ind, gt_classes, instance_id, roi, difficult
+        # print batch_ind.shape, gt_classes.shape, instance_id.shape, roi.shape, difficult.shape
+        roi_blob_this_image = np.hstack((batch_ind, gt_classes, instance_id,
+                                         roi, difficult))
+        roi_blob = np.vstack((roi_blob, roi_blob_this_image))
 
     # Create a blob to hold the input images
-    blob = im_list_to_blob(processed_ims)
+    im_blob = im_list_to_blob(processed_ims)
+    blobs = {'data': im_blob}
 
-    return blob, im_scales, im_crops, im_shapes
+    roi_blob = np.expand_dims(roi_blob, axis=0)
+    roi_blob = np.expand_dims(roi_blob, axis=0)
+    blobs['label'] = roi_blob
+
+    return blobs
 
 
 def prep_im_for_blob(im, pixel_means, target_size, max_size):
@@ -198,202 +166,87 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
     return im, im_scale
 
 
-def _project_im_rois(im_rois, im_scale_factor, im_crop):
-    """Project image RoIs into the rescaled training image."""
-    im_rois[:, 0] = np.minimum(
-        np.maximum(im_rois[:, 0], im_crop[0]), im_crop[2])
-    im_rois[:, 1] = np.minimum(
-        np.maximum(im_rois[:, 1], im_crop[1]), im_crop[3])
-    im_rois[:, 2] = np.maximum(
-        np.minimum(im_rois[:, 2], im_crop[2]), im_crop[0])
-    im_rois[:, 3] = np.maximum(
-        np.minimum(im_rois[:, 3], im_crop[3]), im_crop[1])
-    crop = np.tile(im_crop[:2], [im_rois.shape[0], 2])
-    rois = (im_rois - crop)
-    rois[:, 1] = rois[:, 1] * im_scale_factor[0]
-    rois[:, 3] = rois[:, 3] * im_scale_factor[0]
-    rois[:, 0] = rois[:, 0] * im_scale_factor[1]
-    rois[:, 2] = rois[:, 2] * im_scale_factor[1]
-
-    # For YAROIPooling Layer
-    rois = (im_rois - crop)
-    width = im_crop[2] - im_crop[0]
-    height = im_crop[3] - im_crop[1]
-    rois[:, 0] = rois[:, 0] / width
-    rois[:, 1] = rois[:, 1] / height
-    rois[:, 2] = rois[:, 2] / width
-    rois[:, 3] = rois[:, 3] / height
-
-    return rois
+def _normalize_img_roi(img_roi, img_shape):
+    roi_normalized = np.copy(img_roi)
+    roi_normalized[:, 0] = roi_normalized[:, 0] / img_shape[1]
+    roi_normalized[:, 1] = roi_normalized[:, 1] / img_shape[0]
+    roi_normalized[:, 2] = roi_normalized[:, 2] / img_shape[1]
+    roi_normalized[:, 3] = roi_normalized[:, 3] / img_shape[0]
+    return roi_normalized
 
 
-def ApplyDistort(in_img):
-    prob = npr.random()
-    if prob > 0.5:
-        # Do random brightness distortion.
-        out_img = RandomBrightness(in_img, cfg.TRAIN.brightness_prob,
-                                   cfg.TRAIN.brightness_delta)
+def _transform_img_roi(img_roi,
+                       gt_classes,
+                       do_crop=False,
+                       crop_bbox=[0, 0, 1, 1],
+                       do_resize=False,
+                       img_scale=[1, 1],
+                       img_shape=[1, 1]):
+    if do_resize:
+        img_roi = _UpdateBBoxByResizePolicy(img_roi, img_scale, img_shape)
 
-        # Do random contrast distortion.
-        out_img = RandomContrast(in_img, cfg.TRAIN.contrast_prob,
-                                 cfg.TRAIN.contrast_lower,
-                                 cfg.TRAIN.contrast_upper)
+    # if !MeetEmitConstraint(img_roi,bbox):
+    # return np.array([])
 
-        # Do random saturation distortion.
-        out_img = RandomSaturation(in_img, cfg.TRAIN.saturation_prob,
-                                   cfg.TRAIN.saturation_lower,
-                                   cfg.TRAIN.saturation_upper)
-
-        # Do random hue distortion.
-        out_img = RandomHue(in_img, cfg.TRAIN.hue_prob, cfg.TRAIN.hue_delta)
-
-        # Do random reordering of the channels.
-        out_img = RandomOrderChannels(in_img, cfg.TRAIN.random_order_prob)
-    else:
-        # Do random brightness distortion.
-        out_img = RandomBrightness(in_img, cfg.TRAIN.brightness_prob,
-                                   cfg.TRAIN.brightness_delta)
-
-        # Do random saturation distortion.
-        out_img = RandomSaturation(in_img, cfg.TRAIN.saturation_prob,
-                                   cfg.TRAIN.saturation_lower,
-                                   cfg.TRAIN.saturation_upper)
-
-        # Do random hue distortion.
-        out_img = RandomHue(in_img, cfg.TRAIN.hue_prob, cfg.TRAIN.hue_delta)
-
-        # Do random contrast distortion.
-        out_img = RandomContrast(in_img, cfg.TRAIN.contrast_prob,
-                                 cfg.TRAIN.contrast_lower,
-                                 cfg.TRAIN.contrast_upper)
-
-        # Do random reordering of the channels.
-        out_img = RandomOrderChannels(in_img, cfg.TRAIN.random_order_prob)
-
-    return out_img
+    if do_crop:
+        img_roi, gt_classes = _project_img_roi(img_roi, gt_classes, crop_bbox)
+    return img_roi, gt_classes
 
 
-def convertTo(in_img, alpha, beta):
-    out_img = in_img.astype(np.float32)
-    out_img = out_img * alpha + beta
-    out_img = np.clip(out_img, 0, 255)
-    out_img = out_img.astype(in_img.dtype)
-    return out_img
+def _project_img_roi(img_roi, gt_classes, src_bbox):
+    num_roi = img_roi.shape[0]
+    roi = []
+    gt = []
+    for i in range(num_roi):
+        roi_this = img_roi[i, :]
+        gt_this = gt_classes[i]
+        if utils.im_transforms.MeetEmitConstraint(src_bbox, roi_this):
+            roi.append(roi_this)
+            gt.append(gt_this)
+    img_roi = np.array(roi, dtype=np.float32)
+    gt_classes = np.array(gt, dtype=np.float32)
+
+    # assert img_roi.shape[0]>0
+    if img_roi.shape[0] == 0:
+        return np.zeros(
+            (0, 4), dtype=np.float32), np.zeros(
+                (0), dtype=np.float32)
+
+    src_width = src_bbox[2] - src_bbox[0]
+    src_height = src_bbox[3] - src_bbox[1]
+
+    proj_roi = np.zeros_like(img_roi)
+    proj_roi[:, 0] = (img_roi[:, 0] - src_bbox[0]) / src_width
+    proj_roi[:, 1] = (img_roi[:, 1] - src_bbox[1]) / src_height
+    proj_roi[:, 2] = (img_roi[:, 2] - src_bbox[0]) / src_width
+    proj_roi[:, 3] = (img_roi[:, 3] - src_bbox[1]) / src_height
+
+    proj_roi[:, 0] = np.minimum(np.maximum(proj_roi[:, 0], 0.0), 1.0)
+    proj_roi[:, 1] = np.minimum(np.maximum(proj_roi[:, 1], 0.0), 1.0)
+    proj_roi[:, 2] = np.minimum(np.maximum(proj_roi[:, 2], 0.0), 1.0)
+    proj_roi[:, 3] = np.minimum(np.maximum(proj_roi[:, 3], 0.0), 1.0)
+
+    return proj_roi, gt_classes
 
 
-def RandomBrightness(in_img, brightness_prob, brightness_delta):
-    prob = npr.random()
-    if prob < brightness_prob:
-        assert brightness_delta > 0, "brightness_delta must be non-negative."
-        delta = npr.uniform(-brightness_delta, brightness_delta)
-        out_img = AdjustBrightness(in_img, delta)
-    else:
-        out_img = in_img
-    return out_img
+def _UpdateBBoxByResizePolicy(roi, img_scale, img_shape):
+    new_shape = [
+        1.0 * img_shape[0] * img_scale[0], 1.0 * img_shape[1] * img_scale[1]
+    ]
 
+    roi[:, 0] = roi[:, 0] * img_shape[1]
+    roi[:, 1] = roi[:, 1] * img_shape[0]
+    roi[:, 2] = roi[:, 2] * img_shape[1]
+    roi[:, 3] = roi[:, 3] * img_shape[0]
 
-def AdjustBrightness(in_img, delta):
-    if abs(delta) > 0:
-        # out_img = cv2.convertTo(in_img, 1, 1, delta)
-        out_img = convertTo(in_img, 1, delta)
-    else:
-        out_img = in_img
-    return out_img
+    roi[:, 0] = roi[:, 0] * img_scale[1]
+    roi[:, 1] = roi[:, 1] * img_scale[0]
+    roi[:, 2] = roi[:, 2] * img_scale[1]
+    roi[:, 3] = roi[:, 3] * img_scale[0]
 
+    roi[:, 0] = roi[:, 0] / new_shape[1]
+    roi[:, 1] = roi[:, 1] / new_shape[0]
+    roi[:, 2] = roi[:, 2] / new_shape[1]
+    roi[:, 3] = roi[:, 3] / new_shape[0]
 
-def RandomContrast(in_img, contrast_prob, lower, upper):
-    prob = npr.random()
-    if prob < contrast_prob:
-        assert upper >= lower, 'contrast upper must be >= lower.'
-        assert lower >= 0, 'contrast lower must be non-negative.'
-        delta = npr.uniform(lower, upper)
-        out_img=AdjustContrast(in_img, delta)
-    else:
-        out_img = in_img
-
-
-def AdjustContrast(in_img, delta):
-    if abs(delta - 1.0) > 1e-3:
-        # out_img = cv2.convertTo(in_img, -1, delta, 0)
-        out_img = convertTo(in_img, delta, 0)
-    else:
-        out_img = in_img
-    return out_img
-
-
-def RandomSaturation(in_img, saturation_prob, lower, upper):
-    prob = npr.random()
-    if prob < saturation_prob:
-        assert upper >= lower, 'saturation upper must be >= lower.'
-        assert lower >= 0, 'saturation lower must be non-negative.'
-        delta = npr.uniform(lower, upper)
-        out_img = AdjustSaturation(in_img, delta)
-    else:
-        out_img = in_img
-    return out_img
-
-
-def AdjustSaturation(in_img, delta):
-    if abs(delta - 1.0) != 1e-3:
-        # Convert to HSV colorspae.
-        out_img = cv2.cvtColor(in_img, cv2.COLOR_BGR2HSV)
-
-        # Split the image to 3 channels.
-        h, s, v = cv2.split(out_img)
-
-        # Adjust the saturation.
-        # channels[1] = cv2.convertTo(channels[1], -1, delta, 0)
-        s = convertTo(s, delta, 0)
-        out_img = cv2.merge((h, s, v))
-
-        # Back to BGR colorspace.
-        out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)
-    else:
-        out_img = in_img
-    return out_img
-
-
-def RandomHue(in_img, hue_prob, hue_delta):
-    prob = npr.random()
-    if prob < hue_prob:
-        assert hue_delta >= 0, 'hue_delta must be non-negative.'
-        delta = npr.uniform(-hue_delta, hue_delta)
-        out_img = AdjustHue(in_img, delta)
-    else:
-        out_img = in_img
-    return out_img
-
-
-def AdjustHue(in_img, delta):
-    if abs(delta) > 0:
-        # Convert to HSV colorspae.
-        out_img = cv2.cvtColor(in_img, cv2.COLOR_BGR2HSV)
-
-        # Split the image to 3 channels.
-        h, s, v = cv2.split(out_img)
-
-        # Adjust the hue.
-        # channels[0] = cv2.convertTo(channels[0], -1, 1, delta)
-        h = convertTo(h, 1, delta)
-        out_img = cv2.merge((h, s, v))
-
-        # Back to BGR colorspace.
-        out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)
-    else:
-        out_img = in_img
-    return out_img
-
-
-def RandomOrderChannels(in_img, random_order_prob):
-    prob = npr.random()
-    if prob < random_order_prob:
-        # Split the image to 3 channels.
-        channels = cv2.split(out_img)
-        assert len(channels) == 3
-
-        # Shuffle the channels.
-        channels = npr.shuffle(channels)
-        out_img = cv2.merge(channels)
-    else:
-        out_img = in_img
-    return out_img
+    return roi

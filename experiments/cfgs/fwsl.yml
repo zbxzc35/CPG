@@ -13,4 +13,4 @@ TEST:
         NMS: 0.5
 
 RNG_SEED: 6
-EXP_DIR: ssd
+EXP_DIR: wsl
