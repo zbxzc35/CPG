@@ -1,6 +1,6 @@
 import caffe
 from configure import cfg
-import wsl_roi_data_layer.roidb as wrdl_roidb
+import wsl_roi_anno_data_layer.roidb as wradl_roidb
 from utils.timer import Timer
 import numpy as np
 import os
@@ -36,9 +36,12 @@ class SolverWrapper(object):
             pb2.text_format.Merge(f.read(), self.solver_param)
 
         if pretrained_model is not None:
-            print('Loading pretrained model '
-                  'weights from {:s}').format(pretrained_model)
-            self.solver.net.copy_from(pretrained_model)
+            pretrained_model_list=pretrained_model.split(',')
+            for pretrained_model_this in pretrained_model_list:
+                pretrained_model_this=pretrained_model_this.strip()
+                print('Loading pretrained model '
+                      'weights from {:s}').format(pretrained_model_this)
+                self.solver.net.copy_from(pretrained_model_this)
 
         elif snapshot_state is not None:
             print 'Loading snapshot state'
@@ -74,6 +77,10 @@ class SolverWrapper(object):
 
     def train_model(self, max_iters):
         """Network training loop."""
+
+        self.solver.solve()
+        return
+
         last_snapshot_iter = -1
         timer = Timer()
         model_paths = []
@@ -116,7 +123,7 @@ def get_training_roidb(imdb):
         print 'done'
 
     print 'Preparing training data...'
-    wrdl_roidb.prepare_roidb(imdb)
+    wradl_roidb.prepare_roidb(imdb)
     print 'done'
 
     return imdb.roidb

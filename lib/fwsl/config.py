@@ -24,7 +24,7 @@ from easydict import EasyDict as edict
 __C = edict()
 # Consumers can get config by:
 #   from cpg.config import cfg_cpg
-cfg_ssd = __C
+cfg_fwsl = __C
 
 #
 # Training options
@@ -62,9 +62,12 @@ __C.TRAIN.hue_delta = 18
 __C.TRAIN.saturation_prob = 0.5
 __C.TRAIN.saturation_lower = 0.5
 __C.TRAIN.saturation_upper = 1.5
+__C.TRAIN.exposure_prob = 0.5
+__C.TRAIN.exposure_lower = 0.5
+__C.TRAIN.exposure_upper = 1.5
 __C.TRAIN.random_order_prob = 0.0
 
-__C.TRAIN.USE_EXPAND = True
+__C.TRAIN.USE_EXPAND = False
 __C.TRAIN.expand_prob = 0.5
 __C.TRAIN.max_expand_ratio = 4.0
 
@@ -72,8 +75,8 @@ __C.TRAIN.USE_SAMPLE = True
 __C.TRAIN.batch_sampler = [
     edict({
         'sampler': {
-            'min_scale': 1.0,
-            'max_scale': 1.0,
+            'min_scale': 0.9,
+            'max_scale': 0.9,
             'min_aspect_ratio': 1.0,
             'max_aspect_ratio': 1.0,
         },
@@ -82,90 +85,6 @@ __C.TRAIN.batch_sampler = [
             'max_jaccard_overlap': 1.0,
         },
         'max_trials': 1,
-        'max_sample': 1,
-    }),
-    edict({
-        'sampler': {
-            'min_scale': 0.3,
-            'max_scale': 1.0,
-            'min_aspect_ratio': 0.5,
-            'max_aspect_ratio': 2.0,
-        },
-        'sample_constraint': {
-            'min_jaccard_overlap': 0.1,
-            'max_jaccard_overlap': 1.0,
-        },
-        'max_trials': 50,
-        'max_sample': 1,
-    }),
-    edict({
-        'sampler': {
-            'min_scale': 0.3,
-            'max_scale': 1.0,
-            'min_aspect_ratio': 0.5,
-            'max_aspect_ratio': 2.0,
-        },
-        'sample_constraint': {
-            'min_jaccard_overlap': 0.3,
-            'max_jaccard_overlap': 1.0,
-        },
-        'max_trials': 50,
-        'max_sample': 1,
-    }),
-    edict({
-        'sampler': {
-            'min_scale': 0.3,
-            'max_scale': 1.0,
-            'min_aspect_ratio': 0.5,
-            'max_aspect_ratio': 2.0,
-        },
-        'sample_constraint': {
-            'min_jaccard_overlap': 0.5,
-            'max_jaccard_overlap': 1.0,
-        },
-        'max_trials': 50,
-        'max_sample': 1,
-    }),
-    edict({
-        'sampler': {
-            'min_scale': 0.3,
-            'max_scale': 1.0,
-            'min_aspect_ratio': 0.5,
-            'max_aspect_ratio': 2.0,
-        },
-        'sample_constraint': {
-            'min_jaccard_overlap': 0.7,
-            'max_jaccard_overlap': 1.0,
-        },
-        'max_trials': 50,
-        'max_sample': 1,
-    }),
-    edict({
-        'sampler': {
-            'min_scale': 0.3,
-            'max_scale': 1.0,
-            'min_aspect_ratio': 0.5,
-            'max_aspect_ratio': 2.0,
-        },
-        'sample_constraint': {
-            'min_jaccard_overlap': 0.9,
-            'max_jaccard_overlap': 1.0,
-        },
-        'max_trials': 50,
-        'max_sample': 1,
-    }),
-    edict({
-        'sampler': {
-            'min_scale': 0.3,
-            'max_scale': 1.0,
-            'min_aspect_ratio': 0.5,
-            'max_aspect_ratio': 2.0,
-        },
-        'sample_constraint': {
-            'min_jaccard_overlap': 0.9,
-            'max_jaccard_overlap': 1.0,
-        },
-        'max_trials': 50,
         'max_sample': 1,
     }),
 ]
@@ -296,7 +215,8 @@ __C.USE_BG = False
 
 __C.SPATIAL_SCALE = 1. / 16.
 
-__C.RESIZE_MODE = 'WARP'
+# __C.RESIZE_MODE = 'WARP'
+__C.RESIZE_MODE = 'FIT_SMALLEST'
 
 
 def get_vis_dir(imdb, net=None):

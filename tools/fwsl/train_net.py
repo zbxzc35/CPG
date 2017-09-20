@@ -1,17 +1,8 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Train a Fast R-CNN network on a region of interest database."""
-
 import _init_paths
-from ssd.train import get_training_roidb, train_net
-from ssd.config import cfg_ssd
+from fwsl.train import get_training_roidb, train_net
+from fwsl.config import cfg_fwsl
 from configure import cfg, cfg_basic_generation, cfg_from_file, cfg_from_list
 from configure import get_output_dir,get_vis_dir
 from datasets.factory import get_imdb
@@ -65,9 +56,8 @@ def combined_roidb(imdb_names):
     def get_roidb(imdb_name):
         imdb = get_imdb(imdb_name)
         print 'Loaded dataset `{:s}` for training'.format(imdb.name)
-        # imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
-        imdb.set_proposal_method('gt')
-        print 'Set proposal method: {:s}'.format('gt')
+        imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
+        print 'Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD)
         roidb = get_training_roidb(imdb)
         return roidb
 
@@ -87,7 +77,7 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
 
-    cfg_basic_generation(cfg_ssd)
+    cfg_basic_generation(cfg_fwsl)
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:

@@ -1,17 +1,7 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-"""The data layer used during training to train a Fast R-CNN network.
-
-RoIDataLayer implements a Caffe Python layer.
-"""
-
 import caffe
 from configure import cfg
 from wsl_roi_data_layer.minibatch import get_minibatch
+from wsl_roi_data_layer.minibatch import vis_minibatch
 import numpy as np
 import yaml
 from multiprocessing import Process, Queue
@@ -66,17 +56,7 @@ class RoIDataLayer(caffe.Layer):
         else:
             db_inds = self._get_next_minibatch_inds()
             minibatch_db = [self._roidb[i] for i in db_inds]
-
-            if cfg.TRAIN.ROI_AU:
-                blobs, roidb = get_minibatch(minibatch_db, self._num_classes,
-                                             db_inds)
-                for i, ind in enumerate(db_inds):
-                    self._roidb[ind] = roidb[i]
-            else:
-                blobs = get_minibatch(minibatch_db, self._num_classes, db_inds)
-
-            return blobs
-            # return get_minibatch(minibatch_db, self._num_classes)
+            return get_minibatch(minibatch_db, self._num_classes)
 
     def set_roidb(self, roidb):
         """Set the roidb to be used by this layer during training."""
@@ -133,10 +113,9 @@ class RoIDataLayer(caffe.Layer):
             self._name_to_top_map['roi_frame'] = idx
             idx += 1
 
-        if cfg.USE_ROI_SCORE:
-            top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM)
-            self._name_to_top_map['roi_score'] = idx
-            idx += 1
+        top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM)
+        self._name_to_top_map['roi_score'] = idx
+        idx += 1
 
         top[idx].reshape(cfg.TRAIN.IMS_PER_BATCH)
         self._name_to_top_map['roi_num'] = idx
@@ -172,37 +151,11 @@ class RoIDataLayer(caffe.Layer):
         blobs = self._get_next_minibatch()
 
         if False:
-            num_roi_vis = 100
-            # channel_swap = (0, 3, 1, 2)
-            channel_swap = (0, 2, 3, 1)
-            ims_blob = blobs['data'].copy()
-            roi_blob = blobs['roi'].copy()
-
-            ims = ims_blob.transpose(channel_swap)
-            for i in range(cfg.TRAIN.IMS_PER_BATCH):
-                im = ims[i]
-                im += cfg.PIXEL_MEANS
-                im = im.astype(np.uint8).copy()
-
-                height = im.shape[0]
-                width = im.shape[1]
-
-                num_img_roi = 0
-                for j in range(roi_blob.shape[0]):
-                    roi = roi_blob[j]
-                    if roi[0] != i:
-                        continue
-                    num_img_roi += 1
-                    if num_img_roi > num_roi_vis:
-                        break
-                    x1 = int(roi[1] * width)
-                    y1 = int(roi[2] * height)
-                    x2 = int(roi[3] * width)
-                    y2 = int(roi[4] * height)
-                    cv2.rectangle(im, (x1, y1), (x2, y2), (0, 0, 255), 1)
-
-                cv2.imshow('image ' + str(i), im)
-            cv2.waitKey(0)
+            vis_minibatch(
+                blobs['data'].copy(),
+                blobs['roi'].copy(),
+                channel_swap=(0, 2, 3, 1),
+                pixel_means=cfg.PIXEL_MEANS)
 
         for blob_name, blob in blobs.iteritems():
             top_ind = self._name_to_top_map[blob_name]
@@ -274,11 +227,5 @@ class BlobFetcher(Process):
         while True:
             db_inds = self._get_next_minibatch_inds()
             minibatch_db = [self._roidb[i] for i in db_inds]
-            if cfg.TRAIN.ROI_AU:
-                blobs, roidb = get_minibatch(minibatch_db, self._num_classes,
-                                             db_inds)
-                for i, ind in enumerate(db_inds):
-                    self._roidb[ind] = roidb[i]
-            else:
-                blobs = get_minibatch(minibatch_db, self._num_classes, db_inds)
+            blobs = get_minibatch(minibatch_db, self._num_classes)
             self._queue.put(blobs)

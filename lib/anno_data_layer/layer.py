@@ -1,17 +1,7 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-"""The data layer used during training to train a Fast R-CNN network.
-
-RoIDataLayer implements a Caffe Python layer.
-"""
-
 import caffe
 from configure import cfg
 from anno_data_layer.minibatch import get_minibatch
+from anno_data_layer.minibatch import vis_minibatch
 import numpy as np
 import yaml
 from multiprocessing import Process, Queue
@@ -107,7 +97,8 @@ class AnnotatedDataLayer(caffe.Layer):
 
         # rois blob: holds R regions of interest, each is a 8-tuple
         # (item_id, group_label, instance_label, x1, y1, x2, y2, difficult) specifying an image batch index n and a rectangle (x1, y1, x2, y2)
-        top[idx].reshape(1,1,cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM, 8)
+        top[idx].reshape(1, 1, cfg.TRAIN.IMS_PER_BATCH * cfg.TRAIN.ROIS_PER_IM,
+                         8)
         self._name_to_top_map['label'] = idx
 
         print 'AnnoDataLayer: name_to_top:', self._name_to_top_map
@@ -117,39 +108,13 @@ class AnnotatedDataLayer(caffe.Layer):
         """Get blobs and copy them into this layer's top blob vector."""
         blobs = self._get_next_minibatch()
 
-        if False:
-            num_roi_vis = 100
-            # channel_swap = (0, 3, 1, 2)
-            channel_swap = (0, 2, 3, 1)
-            ims_blob = blobs['data'].copy()
-            rois_blob = blobs['label'].copy()
-
-            ims = ims_blob.transpose(channel_swap)
-            for i in range(cfg.TRAIN.IMS_PER_BATCH):
-                im = ims[i]
-                im += cfg.PIXEL_MEANS
-                im = im.astype(np.uint8).copy()
-
-                height = im.shape[0]
-                width = im.shape[1]
-
-                num_img_roi = 0
-                for j in range(rois_blob.shape[2]):
-                    roi = rois_blob[:,:,j,:]
-                    roi=np.squeeze(roi)
-                    if roi[0] != i:
-                        continue
-                    num_img_roi += 1
-                    if num_img_roi > num_roi_vis:
-                        break
-                    x1 = int(roi[3] * width)
-                    y1 = int(roi[4] * height)
-                    x2 = int(roi[5] * width)
-                    y2 = int(roi[6] * height)
-                    cv2.rectangle(im, (x1, y1), (x2, y2), (0, 0, 255), 1)
-
-                cv2.imshow('image ' + str(i), im)
-            cv2.waitKey(0)
+        # if False:
+        if True:
+            vis_minibatch(
+                blobs['data'].copy(),
+                blobs['label'].copy(),
+                channel_swap=(0, 2, 3, 1),
+                pixel_means=cfg.PIXEL_MEANS)
 
         for blob_name, blob in blobs.iteritems():
             top_ind = self._name_to_top_map[blob_name]

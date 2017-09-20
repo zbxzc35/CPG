@@ -81,10 +81,10 @@ echo ---------------------------------------------------------------------
 echo showing the solver file:
 cat "output/${EXP_DIR}/solver.prototxt"
 echo ---------------------------------------------------------------------
-time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
+time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
 	--solver output/${EXP_DIR}/solver.prototxt \
 	--weights data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel,data/imagenet_models/fc6fc7fc8wsl.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
-	--cfg experiments/cfgs/ssd.yml \
+	--cfg experiments/cfgs/fwsl.yml \
 	${EXTRA_ARGS}

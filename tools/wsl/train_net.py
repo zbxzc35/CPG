@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Train a Fast R-CNN network on a region of interest database."""
-
 import _init_paths
 from wsl.train import get_training_roidb, train_net
 from wsl.config import cfg_wsl

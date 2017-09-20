@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Test a Fast R-CNN network on an image database."""
-
 import _init_paths
 from wsl.test import test_net, test_net_cache, test_net_bbox
 from wsl.config import cfg_wsl
@@ -88,6 +79,7 @@ if __name__ == '__main__':
             time.sleep(60 * 10)
         time.sleep(60 * 5)
 
+    # set up caffe
     caffe.set_mode_gpu()
     caffe.set_device(args.gpu_id)
     net = caffe.Net(args.prototxt, args.caffemodel, caffe.TEST)

@@ -1,12 +1,3 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""Train a Fast R-CNN network."""
-
 import caffe
 from configure import cfg
 import anno_data_layer.roidb as adl_roidb
@@ -25,13 +16,16 @@ class SolverWrapper(object):
     use to unnormalize the learned bounding-box regression weights.
     """
 
-    def __init__(self, solver_prototxt, roidb, output_dir,
-                 pretrained_model=None, snapshot_state=None):
+    def __init__(self,
+                 solver_prototxt,
+                 roidb,
+                 output_dir,
+                 pretrained_model=None,
+                 snapshot_state=None):
         is_pretrained = pretrained_model is not None
         is_snapshoted = snapshot_state is not None
         assert is_pretrained or is_snapshoted
         assert not (is_pretrained and is_snapshoted)
-
         """Initialize the SolverWrapper."""
         self.output_dir = output_dir
 
@@ -42,8 +36,8 @@ class SolverWrapper(object):
             pb2.text_format.Merge(f.read(), self.solver_param)
 
         if pretrained_model is not None:
-            print ('Loading pretrained model '
-                   'weights from {:s}').format(pretrained_model)
+            print('Loading pretrained model '
+                  'weights from {:s}').format(pretrained_model)
             self.solver.net.copy_from(pretrained_model)
 
         elif snapshot_state is not None:
@@ -65,8 +59,10 @@ class SolverWrapper(object):
 
         infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
                  if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
-        filename = (self.solver_param.snapshot_prefix + infix +
-                    '_iter_{:d}'.format(cfg.TRAIN.SNAPSHOT_ITERS * self.solver.iter / self.steps_snapshot) + '.caffemodel')
+        filename = (
+            self.solver_param.snapshot_prefix + infix + '_iter_{:d}'.format(
+                cfg.TRAIN.SNAPSHOT_ITERS * self.solver.iter /
+                self.steps_snapshot) + '.caffemodel')
         filename = os.path.join(self.output_dir, filename)
 
         net.save(str(filename))
@@ -128,14 +124,23 @@ def get_training_roidb(imdb):
     print 'done'
 
     return imdb.roidb
-def train_net(solver_prototxt, roidb, output_dir,
-              pretrained_model=None, snapshot_state=None, max_iters=40):
+
+
+def train_net(solver_prototxt,
+              roidb,
+              output_dir,
+              pretrained_model=None,
+              snapshot_state=None,
+              max_iters=40):
     """Train a Fast R-CNN network."""
 
     # roidb = filter_roidb(roidb)
-    sw = SolverWrapper(solver_prototxt, roidb, output_dir,
-                       pretrained_model=pretrained_model,
-                       snapshot_state=snapshot_state)
+    sw = SolverWrapper(
+        solver_prototxt,
+        roidb,
+        output_dir,
+        pretrained_model=pretrained_model,
+        snapshot_state=snapshot_state)
 
     print 'Solving...'
     print 'I0801 00:00:00.000000 00000 solver.cpp:000] Solving Net'
