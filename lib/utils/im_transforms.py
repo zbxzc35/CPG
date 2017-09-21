@@ -23,7 +23,7 @@ def GenerateSamples(roi, batch_sampler, img_shape):
         if found > batch_sampler.max_sample:
             return sampled_bboxes
         # Generate sampled_bbox in the normalized space [0, 1].
-        sampled_bbox = SampleBBox(batch_sampler.sampler,img_shape)
+        sampled_bbox = SampleBBox(batch_sampler.sampler, img_shape)
 
         if SatisfySampleConstraint(sampled_bbox, roi,
                                    batch_sampler.sample_constraint):
@@ -140,13 +140,12 @@ def Crop(img, crop_bbox):
     x2 = int(x2)
     y2 = int(y2)
 
-    assert x1 >= 0,x1
-    assert y1 >= 0,y1
-    assert x2 <= img_shape[1],'{} vs {}'.format(x2,img_shape[1])
-    assert y2 <= img_shape[0],'{} vs {}'.format(y2,img_shape[0])
+    assert x1 >= 0, x1
+    assert y1 >= 0, y1
+    assert x2 <= img_shape[1], '{} vs {}'.format(x2, img_shape[1])
+    assert y2 <= img_shape[0], '{} vs {}'.format(y2, img_shape[0])
 
-
-    crop_img = img[y1:y2 , x1:x2 , :]
+    crop_img = img[y1:y2, x1:x2, :]
 
     return crop_img
 
@@ -158,6 +157,31 @@ def MeetEmitConstraint(src_bbox, bbox):
         return True
     else:
         return False
+
+
+def ApplyCrop_old(img):
+    img_shape = np.array(img.shape)
+    crop_dims = img_shape[:2] * cfg.TRAIN.CROP
+    # crop_dims = img_shape[:2] * 0.9
+
+    r0 = npr.random()
+    r1 = npr.random()
+    s = img_shape[:2] - crop_dims
+    s[0] *= r0
+    s[1] *= r1
+    # im_crop = np.array([s[0],
+    # s[1],
+    # s[0] + crop_dims[0] - 1,
+    # s[1] + crop_dims[1] - 1],
+    # dtype=np.uint16)
+
+    crop_bbox = np.array(
+        [s[1], s[0], s[1] + crop_dims[1] - 1, s[0] + crop_dims[0] - 1],
+        dtype=np.uint16)
+    crop_img = img[crop_bbox[1]:crop_bbox[3] + 1, crop_bbox[0]:
+                   crop_bbox[2] + 1, :]
+
+    return crop_img, crop_bbox
 
 
 def ApplyCrop(img):
@@ -192,10 +216,12 @@ def ApplyExpand(img):
     img_shape = img.shape
     prob = npr.random()
     if prob > cfg.TRAIN.expand_prob:
-        return img, np.array((0, 0, img_shape[1], img_shape[0]), dtype=np.uint16)
+        return img, np.array(
+            (0, 0, img_shape[1], img_shape[0]), dtype=np.uint16)
 
     if abs(cfg.TRAIN.max_expand_ratio - 1.) < 1e-2:
-        return img, np.array((0, 0, img_shape[1], img_shape[0]), dtype=np.uint16)
+        return img, np.array(
+            (0, 0, img_shape[1], img_shape[0]), dtype=np.uint16)
 
     expand_ratio = npr.uniform(1, cfg.TRAIN.max_expand_ratio)
     expand_img, expand_bbox = ExpandImage(img, expand_ratio)
@@ -235,6 +261,24 @@ def ExpandImage(img, expand_ratio):
     return expand_img, expand_bbox
 
 
+def ApplyDistort_old(in_img):
+    hsv = np.array(in_img, dtype=np.uint8)
+    hsv = cv2.cvtColor(hsv, cv2.COLOR_BGR2HSV)
+    s0 = npr.random() * (cfg.TRAIN.SATURATION - 1) + 1
+    s1 = npr.random() * (cfg.TRAIN.EXPOSURE - 1) + 1
+    # s0 = npr.random() * (1.5 - 1) + 1
+    # s1 = npr.random() * (1.5 - 1) + 1
+    s0 = s0 if npr.random() > 0.5 else 1.0 / s0
+    s1 = s1 if npr.random() > 0.5 else 1.0 / s1
+    hsv = np.array(hsv, dtype=np.float32)
+    hsv[:, :, 1] = np.minimum(s0 * hsv[:, :, 1], 255)
+    hsv[:, :, 2] = np.minimum(s1 * hsv[:, :, 2], 255)
+    hsv = np.array(hsv, dtype=np.uint8)
+    out_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    out_img = out_img.astype(in_img.dtype)
+    return out_img
+
+
 def ApplyDistort(in_img):
     prob = npr.random()
     if prob > 0.5:
@@ -257,8 +301,8 @@ def ApplyDistort(in_img):
 
         # Do random exposure distortion.
         out_img = RandomExposure(out_img, cfg.TRAIN.exposure_prob,
-                                   cfg.TRAIN.exposure_lower,
-                                   cfg.TRAIN.exposure_upper)
+                                 cfg.TRAIN.exposure_lower,
+                                 cfg.TRAIN.exposure_upper)
         # cv2.imshow('4',out_img.astype(np.uint8))
 
         # Do random hue distortion.
@@ -282,8 +326,8 @@ def ApplyDistort(in_img):
 
         # Do random exposure distortion.
         out_img = RandomExposure(out_img, cfg.TRAIN.exposure_prob,
-                                   cfg.TRAIN.exposure_lower,
-                                   cfg.TRAIN.exposure_upper)
+                                 cfg.TRAIN.exposure_lower,
+                                 cfg.TRAIN.exposure_upper)
         # cv2.imshow('3',out_img.astype(np.uint8))
 
         # Do random hue distortion.

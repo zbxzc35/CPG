@@ -1,20 +1,3 @@
-# --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-"""Fast R-CNN config system.
-
-This file specifies default config options for Fast R-CNN. You should not
-change values in this file. Instead, you should write a config file (in yaml)
-and use cfg_from_file(yaml_file) to load it and override the default options.
-
-Most tools in $ROOT/tools take a --cfg option to specify an override file.
-    - See tools/{train,test}_net.py for example code that uses cfg_from_file()
-    - See experiments/cfgs/*.yml for example YAML config override files
-"""
-
 import os
 import os.path as osp
 import numpy as np
@@ -62,6 +45,9 @@ __C.TRAIN.hue_delta = 18
 __C.TRAIN.saturation_prob = 0.5
 __C.TRAIN.saturation_lower = 0.5
 __C.TRAIN.saturation_upper = 1.5
+__C.TRAIN.exposure_prob = 0.5
+__C.TRAIN.exposure_lower = 0.5
+__C.TRAIN.exposure_upper = 1.5
 __C.TRAIN.random_order_prob = 0.0
 
 __C.TRAIN.USE_EXPAND = True
@@ -204,6 +190,8 @@ __C.TRAIN.ASPECT_GROUPING = True
 __C.TRAIN.PASS_IM = 0
 
 __C.TRAIN.SHUFFLE = True
+
+__C.TRAIN.PSEUDO_PATH = 'output/vgg16_cpg_0921/voc_2007_trainval/VGG16_2_iter_10/detections_o.pkl'
 
 #
 # Testing options

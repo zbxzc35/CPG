@@ -57,16 +57,12 @@ def get_minibatch(roidb, num_classes):
         # expand_bbox is define as RoIs with form (x1,y1,x2,y2)
         if cfg.TRAIN.USE_EXPAND:
             img, expand_bbox = utils.im_transforms.ApplyExpand(img)
-        else:
-            expand_bbox = np.array(
-                [0, 0, img.shape[1], img.shape[0]], dtype=np.uint16)
-
-        roi, gt_classes = _transform_img_roi(
-            roi,
-            gt_classes,
-            do_crop=True,
-            crop_bbox=expand_bbox,
-            img_shape=img.shape)
+            roi, gt_classes = _transform_img_roi(
+                roi,
+                gt_classes,
+                do_crop=True,
+                crop_bbox=expand_bbox,
+                img_shape=img.shape)
         # vis(img, roi, show_name='expand')
 
         #-------------------------------------------------------------
@@ -84,7 +80,7 @@ def get_minibatch(roidb, num_classes):
                     do_crop=True,
                     crop_bbox=sampled_bbox,
                     img_shape=img.shape)
-            # vis(img, roi, show_name='sample')
+        # vis(img, roi, show_name='sample')
 
             #-------------------------------------------------------------
         target_size = cfg.TRAIN.SCALES[random_scale_inds[i_im]]
@@ -280,12 +276,14 @@ def _UpdateBBoxByResizePolicy(roi, img_scale):
     return roi
 
 
-def vis(im,
+def vis(img,
         rois,
         channel_swap=(0, 1, 2),
         pixel_means=np.zeros((1, 3)),
         show_name='image',
         normalized=False):
+    im = img.copy()
+    print show_name, ' mean: ', np.mean(im)
     num_roi_vis = 100
     # channel_swap = (0, 2, 3, 1)
 
@@ -324,15 +322,17 @@ def vis(im,
 def vis_minibatch(ims_blob,
                   rois_blob,
                   channel_swap=(0, 1, 2, 3),
-                  pixel_means=np.zeros((1, 3))):
+                  pixel_means=np.zeros((1, 1, 3))):
     num_roi_vis = 100
     # channel_swap = (0, 2, 3, 1)
 
-    ims = ims_blob.transpose(channel_swap)
+    ims = ims_blob.copy()
+    ims = ims.transpose(channel_swap)
+    ims += pixel_means
 
     for i in range(ims.shape[0]):
         im = ims[i]
-        im += pixel_means
+        print 'wsl image mean: ', np.mean(ims)
         im = im.astype(np.uint8).copy()
 
         height = im.shape[0]
@@ -353,5 +353,5 @@ def vis_minibatch(ims_blob,
             y2 = int(roi[6] * height)
             cv2.rectangle(im, (x1, y1), (x2, y2), (0, 0, 255), 1)
 
-        cv2.imshow('image ' + str(i), im)
+        cv2.imshow('ssd image ' + str(i), im)
     cv2.waitKey(0)

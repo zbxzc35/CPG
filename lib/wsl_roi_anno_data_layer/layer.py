@@ -154,7 +154,7 @@ class RoIDataLayer(caffe.Layer):
         """Get blobs and copy them into this layer's top blob vector."""
         blobs = self._get_next_minibatch()
 
-        if True:
+        if False:
             vis_minibatch(
                 blobs['data'].copy(),
                 blobs['roi'].copy(),

@@ -58,6 +58,8 @@ def get_minibatch(roidb, num_classes):
         #-------------------------------------------------------------
         if cfg.TRAIN.USE_DISTORTION:
             img = utils.im_transforms.ApplyDistort(img)
+        elif cfg.TRAIN.USE_DISTORTION_OLD:
+            img = utils.im_transforms.ApplyDistort_old(img)
         # vis(img, roi, show_name='distortion')
 
         #-------------------------------------------------------------
@@ -72,16 +74,12 @@ def get_minibatch(roidb, num_classes):
         # expand_bbox is define as RoIs with form (x1,y1,x2,y2)
         if cfg.TRAIN.USE_EXPAND:
             img, expand_bbox = utils.im_transforms.ApplyExpand(img)
-        else:
-            expand_bbox = np.array(
-                [0, 0, img.shape[1], img.shape[0]], dtype=np.uint16)
-
-        roi, gt_classes = _transform_img_roi(
-            roi,
-            roi_score,
-            do_crop=True,
-            crop_bbox=expand_bbox,
-            img_shape=img.shape)
+            roi, roi_score = _transform_img_roi(
+                roi,
+                roi_score,
+                do_crop=True,
+                crop_bbox=expand_bbox,
+                img_shape=img.shape)
         # vis(img, roi, show_name='expand')
 
         #-------------------------------------------------------------
@@ -93,22 +91,32 @@ def get_minibatch(roidb, num_classes):
                 sampled_bbox = sampled_bboxes[rand_idx]
 
                 img = utils.im_transforms.Crop(img, sampled_bbox)
-                roi, gt_classes = _transform_img_roi(
+                roi, roi_score = _transform_img_roi(
                     roi,
                     roi_score,
                     do_crop=True,
                     crop_bbox=sampled_bbox,
                     img_shape=img.shape)
-            # vis(img, roi, show_name='sample')
+        # vis(img, roi, show_name='sample')
 
-            #-------------------------------------------------------------
+        if cfg.TRAIN.USE_CROP:
+            img, crop_bbox = utils.im_transforms.ApplyCrop_old(img)
+            roi, roi_score = _transform_img_roi(
+                roi,
+                roi_score,
+                do_crop=True,
+                crop_bbox=crop_bbox,
+                img_shape=img.shape)
+        # vis(img, roi, show_name='crop')
+
+        #-------------------------------------------------------------
         target_size = cfg.TRAIN.SCALES[random_scale_inds[i_im]]
         img, img_scale = prep_im_for_blob(img, cfg.PIXEL_MEANS, target_size,
                                           cfg.TRAIN.MAX_SIZE)
 
         processed_ims.append(img)
 
-        roi, gt_classes = _transform_img_roi(
+        roi, roi_score = _transform_img_roi(
             roi,
             roi_score,
             do_resize=True,
@@ -350,12 +358,14 @@ def get_inner_outer_roi(im_roi, ratio):
     return roi_inner, roi_outer
 
 
-def vis(im,
+def vis(img,
         rois,
         channel_swap=(0, 1, 2),
         pixel_means=np.zeros((1, 3)),
         show_name='image',
         normalized=False):
+    im = img.copy()
+    print show_name, ' mean: ', np.mean(im)
     num_roi_vis = 100
     # channel_swap = (0, 2, 3, 1)
 
@@ -394,19 +404,18 @@ def vis(im,
 def vis_minibatch(ims_blob,
                   rois_blob,
                   channel_swap=(0, 1, 2, 3),
-                  pixel_means=np.zeros((1, 3))):
+                  pixel_means=np.zeros((1, 1, 3))):
     num_roi_vis = 100
     # channel_swap = (0, 2, 3, 1)
 
-    ims = ims_blob.transpose(channel_swap)
+    ims = ims_blob.copy()
+    ims = ims.transpose(channel_swap)
+    ims += pixel_means
 
     for i in range(ims.shape[0]):
         im = ims[i]
-        im += pixel_means
+        print 'wsl image mean: ', np.mean(ims)
         im = im.astype(np.uint8).copy()
-
-        height = im.shape[0]
-        width = im.shape[1]
 
         num_img_roi = 0
         for j in range(rois_blob.shape[0]):
@@ -423,5 +432,5 @@ def vis_minibatch(ims_blob,
             y2 = int(roi[4])
             cv2.rectangle(im, (x1, y1), (x2, y2), (0, 0, 255), 1)
 
-        cv2.imshow('image ' + str(i), im)
+        cv2.imshow('wsl image ' + str(i), im)
     cv2.waitKey(0)

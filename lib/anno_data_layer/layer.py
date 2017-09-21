@@ -108,8 +108,8 @@ class AnnotatedDataLayer(caffe.Layer):
         """Get blobs and copy them into this layer's top blob vector."""
         blobs = self._get_next_minibatch()
 
-        # if False:
-        if True:
+        if False:
+        # if True:
             vis_minibatch(
                 blobs['data'].copy(),
                 blobs['label'].copy(),

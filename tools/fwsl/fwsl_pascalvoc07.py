@@ -169,18 +169,19 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         'is_order': False,
         'is_contrast': False,
         'debug_info': False,
-        'start_layer_name': "conv1_1",
-        'end_layer_name': "cls_score",
+        # 'start_layer_name': "conv1_1",
+        # 'end_layer_name': "cls_score",
         'ignore_label': 20,
         'cpg_blob_name': "data",
-        'predict_threshold': 0.9,
+        'predict_blob_name': "cls_score",
+        'predict_threshold': 0.7,
         'predict_order': 0.0,
         'crf_threshold': 0.95,
         'mass_threshold': 0.2,
         'density_threshold': 0.0,
         'fg_threshold': 0.1,
         'bg_threshold': 0.001,
-        'max_num_im_cpg': accum_batch_size * solver_param['max_iter'] / 2,
+        'max_num_im_cpg': 2 * 5011 * 20,
     }
 
     cross_entropy_loss_param = {
@@ -324,7 +325,6 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         loss_weight=1,
         cross_entropy_loss_param=cross_entropy_loss_param,
         loss_param=loss_param,
-        include=dict(phase=caffe_pb2.Phase.Value('TRAIN')),
         propagate_down=[True, False])
 
     net['loss_neg'] = L.CrossEntropyLoss(
@@ -333,7 +333,6 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         loss_weight=1,
         cross_entropy_loss_param=cross_entropy_loss_param,
         loss_param=loss_param,
-        include=dict(phase=caffe_pb2.Phase.Value('TRAIN')),
         propagate_down=[True, False])
 
     from_layers = [
@@ -641,8 +640,8 @@ gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
 # Divide the mini-batch to different GPUs.
-batch_size = 32
-accum_batch_size = 32
+batch_size = 1
+accum_batch_size = 128
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
 device_id = 0
@@ -675,19 +674,21 @@ solver_param = {
     # Train parameters
     'base_lr': base_lr,
     'weight_decay': 0.0005,
-    'lr_policy': "multistep",
-    'stepvalue': [80000, 100000, 120000],
+    # 'lr_policy': "multistep",
+    # 'stepvalue': [80000, 100000, 120000],
+    'lr_policy': "step",
+    'stepsize': 7820,
     'gamma': 0.1,
     'momentum': 0.9,
     'iter_size': iter_size,
     'max_iter': 120000,
-    'snapshot': 80000,
+    'snapshot': 10000,
     'display': 10,
     'average_loss': 10,
     # 'type': "SGD",
     'solver_mode': solver_mode,
     'device_id': device_id,
-    'debug_info': True,
+    'debug_info': False,
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
@@ -749,13 +750,14 @@ net.data, net.roi, net.roi_normalized, net.roi_score, net.roi_num, net.label = L
     layer='RoIDataLayer',
     param_str="'num_classes': 20")
 
-VGGNetBody(
+ya_VGGNetBody(
     net,
     from_layer='data',
     fully_conv=True,
     reduced=True,
     dilated=True,
-    dropout=False)
+    dropout=False,
+    freeze_all_layers=True)
 
 AddExtraLayers_cpg(net, lr_mult=lr_mult)
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)

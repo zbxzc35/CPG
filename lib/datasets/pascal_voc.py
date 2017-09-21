@@ -250,21 +250,25 @@ class pascal_voc(imdb):
             assert obj_i == num_objs
 
             # Show Pseudo GT boxes
-            # im = cv2.imread(self.image_path_at(im_i))
-            # print boxes
-            # for obj_i in range(num_objs):
-                # cv2.rectangle(
-                    # im,
-                    # (boxes[obj_i][0],
-                     # boxes[obj_i][1]),
-                    # (boxes[obj_i][2],
-                     # boxes[obj_i][3]),
-                    # (255,
-                     # 0,
-                     # 0),
-                    # 5)
-            # cv2.imshow('im',im)
-            # cv2.waitKey()
+            # if True:
+            if False:
+                im = cv2.imread(self.image_path_at(im_i))
+                print boxes
+                for obj_i in range(num_objs):
+                    cv2.rectangle(
+                        im,
+                        (boxes[obj_i][0],
+                         boxes[obj_i][1]),
+                        (boxes[obj_i][2],
+                         boxes[obj_i][3]),
+                        (255,
+                         0,
+                         0),
+                        5)
+                cv2.imshow('im',im)
+                cv2.waitKey()
+
+            overlaps = scipy.sparse.csr_matrix(overlaps)
 
             gt_roidb.append(
                 {'boxes': boxes,
