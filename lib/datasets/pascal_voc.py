@@ -168,10 +168,12 @@ class pascal_voc(imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
 
+        assert 'trainval' in self.name,'Only trainval dataset has pseudo gt.'
+
         # detection.pkl is 0-based indices
         # the VOC result file is 1-based indices
 
-        cache_file = cfg.PSEUDO_PATH
+        cache_file = cfg.TRAIN.PSEUDO_PATH
         assert os.path.exists(cache_file)
         with open(cache_file, 'rb') as fid:
             roidb = cPickle.load(fid)

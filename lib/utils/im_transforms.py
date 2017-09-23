@@ -209,6 +209,7 @@ def ApplyCrop(img):
     # row col row col to x1 y1 x2 y2
     crop_bbox[0], crop_bbox[1], crop_bbox[2], crop_bbox[3] = crop_bbox[
         1], crop_bbox[0], crop_bbox[3], crop_bbox[2]
+
     return crop_img, crop_bbox
 
 
@@ -253,8 +254,7 @@ def ExpandImage(img, expand_ratio):
     expand_bbox.append(height - h_off - 1)
     expand_bbox = np.array(expand_bbox)
 
-    expand_img = np.tile(cfg.PIXEL_MEANS, (height, width,
-                                           1)).astype(np.float32)
+    expand_img = np.tile(cfg.PIXEL_MEANS, (height, width, 1)).astype(img.dtype)
 
     expand_img[h_off:h_off + img_height, w_off:w_off + img_width, :] = img
 
@@ -262,8 +262,7 @@ def ExpandImage(img, expand_ratio):
 
 
 def ApplyDistort_old(in_img):
-    hsv = np.array(in_img, dtype=np.uint8)
-    hsv = cv2.cvtColor(hsv, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(in_img, cv2.COLOR_BGR2HSV)
     s0 = npr.random() * (cfg.TRAIN.SATURATION - 1) + 1
     s1 = npr.random() * (cfg.TRAIN.EXPOSURE - 1) + 1
     # s0 = npr.random() * (1.5 - 1) + 1
@@ -275,7 +274,6 @@ def ApplyDistort_old(in_img):
     hsv[:, :, 2] = np.minimum(s1 * hsv[:, :, 2], 255)
     hsv = np.array(hsv, dtype=np.uint8)
     out_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    out_img = out_img.astype(in_img.dtype)
     return out_img
 
 
@@ -348,10 +346,10 @@ def ApplyDistort(in_img):
 
 
 def convertTo(in_img, alpha, beta):
-    out_img = in_img.astype(np.float32)
-    out_img = out_img * alpha + beta
+    # out_img = in_img.astype(np.float32)
+    out_img = in_img * alpha + beta
     out_img = np.clip(out_img, 0, 255)
-    out_img = out_img.astype(in_img.dtype)
+    # out_img = out_img.astype(in_img.dtype)
     return out_img
 
 

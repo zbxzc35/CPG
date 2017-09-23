@@ -191,7 +191,7 @@ __C.TRAIN.PASS_IM = 0
 
 __C.TRAIN.SHUFFLE = True
 
-__C.TRAIN.PSEUDO_PATH = 'output/vgg16_cpg_0921/voc_2007_trainval/VGG16_2_iter_10/detections_o.pkl'
+__C.TRAIN.PSEUDO_PATH = 'output/vgg16_cpg_0922_17_bk/voc_2007_trainval/VGG16_2_iter_10/detections_o.pkl'
 
 #
 # Testing options
