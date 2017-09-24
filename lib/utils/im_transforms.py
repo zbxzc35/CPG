@@ -58,13 +58,13 @@ def SampleBBox(sampler, img_shape):
     w_off = npr.uniform(0.0, 1.0 - bbox_width)
 
     #---------------------------------------
-    bbox_height = bbox_height * img_shape[0]
-    bbox_width = bbox_width * img_shape[1]
-    h_off = 1.0 * h_off * img_shape[0]
-    w_off = 1.0 * w_off * img_shape[1]
+    bbox_height = int(bbox_height * img_shape[0])
+    bbox_width = int(bbox_width * img_shape[1])
+    h_off = int(h_off * img_shape[0])
+    w_off = int(w_off * img_shape[1])
 
     sampled_bbox = np.array(
-        [w_off, h_off, w_off + bbox_width, h_off + bbox_height])
+        [w_off, h_off, w_off + bbox_width - 1, h_off + bbox_height - 1])
     return sampled_bbox
 
 
@@ -130,22 +130,17 @@ def Crop(img, crop_bbox):
     # x2 = 1.0 * crop_bbox[2] * img_shape[1]
     # y2 = 1.0 * crop_bbox[3] * img_shape[0]
 
-    x1 = 1.0 * crop_bbox[0]
-    y1 = 1.0 * crop_bbox[1]
-    x2 = 1.0 * crop_bbox[2]
-    y2 = 1.0 * crop_bbox[3]
-
-    x1 = int(x1)
-    y1 = int(y1)
-    x2 = int(x2)
-    y2 = int(y2)
+    x1 = int(crop_bbox[0]) + 1
+    y1 = int(crop_bbox[1]) + 1
+    x2 = int(crop_bbox[2]) + 1
+    y2 = int(crop_bbox[3]) + 1
 
     assert x1 >= 0, x1
     assert y1 >= 0, y1
     assert x2 <= img_shape[1], '{} vs {}'.format(x2, img_shape[1])
     assert y2 <= img_shape[0], '{} vs {}'.format(y2, img_shape[0])
 
-    crop_img = img[y1:y2, x1:x2, :]
+    crop_img = img[y1:y2 + 1, x1:x2 + 1, :]
 
     return crop_img
 
@@ -159,7 +154,13 @@ def MeetEmitConstraint(src_bbox, bbox):
         return False
 
 
-def ApplyCrop_old(img):
+def ApplyCrop(img):
+    if cfg.TRAIN.CROP <= 0:
+        img_height = img.shape[0]
+        img_width = img.shape[1]
+        return img, np.array(
+            (0, 0, img_width - 1, img_height - 1), dtype=np.uint16)
+
     img_shape = np.array(img.shape)
     crop_dims = img_shape[:2] * cfg.TRAIN.CROP
     # crop_dims = img_shape[:2] * 0.9
@@ -180,35 +181,6 @@ def ApplyCrop_old(img):
         dtype=np.uint16)
     crop_img = img[crop_bbox[1]:crop_bbox[3] + 1, crop_bbox[0]:
                    crop_bbox[2] + 1, :]
-
-    return crop_img, crop_bbox
-
-
-def ApplyCrop(img):
-    if cfg.TRAIN.CROP <= 0:
-        img_height = img.shape[0]
-        img_width = img.shape[1]
-        return img, np.array(
-            (0, 0, img_width - 1, img_height - 1), dtype=np.uint16)
-
-    img_shape = np.array(img.shape)
-    crop_dims = img_shape[:2] * cfg.TRAIN.CROP
-
-    r0 = npr.random()
-    r1 = npr.random()
-    s = img_shape[:2] - crop_dims
-    s[0] *= r0
-    s[1] *= r1
-    crop_bbox = np.array(
-        [s[0], s[1], s[0] + crop_dims[0] - 1, s[1] + crop_dims[1] - 1],
-        dtype=np.uint16)
-
-    crop_img = img[crop_bbox[0]:crop_bbox[2] + 1, crop_bbox[1]:
-                   crop_bbox[3] + 1, :]
-
-    # row col row col to x1 y1 x2 y2
-    crop_bbox[0], crop_bbox[1], crop_bbox[2], crop_bbox[3] = crop_bbox[
-        1], crop_bbox[0], crop_bbox[3], crop_bbox[2]
 
     return crop_img, crop_bbox
 
@@ -417,7 +389,8 @@ def AdjustExposure(in_img, delta):
         # Adjust the exposure.
         # channels[2] = cv2.convertTo(channels[2], -1, delta, 0)
         v = convertTo(v, delta, 0)
-        out_img = cv2.merge((h, s, v))
+        # out_img = cv2.merge((h, s, v))
+        out_img[:, :, 2] = v
 
         # Back to BGR colorspace.
         out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)
@@ -449,7 +422,8 @@ def AdjustSaturation(in_img, delta):
         # Adjust the saturation.
         # channels[1] = cv2.convertTo(channels[1], -1, delta, 0)
         s = convertTo(s, delta, 0)
-        out_img = cv2.merge((h, s, v))
+        # out_img = cv2.merge((h, s, v))
+        out_img[:, :, 1] = s
 
         # Back to BGR colorspace.
         out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)
@@ -480,7 +454,8 @@ def AdjustHue(in_img, delta):
         # Adjust the hue.
         # channels[0] = cv2.convertTo(channels[0], -1, 1, delta)
         h = convertTo(h, 1, delta)
-        out_img = cv2.merge((h, s, v))
+        # out_img = cv2.merge((h, s, v))
+        out_img[:, :, 0] = h
 
         # Back to BGR colorspace.
         out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)

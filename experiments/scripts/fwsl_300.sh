@@ -75,14 +75,37 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}
+#第一步
+
+#第二步
+python ./tools/fwsl/ssd_pascalvoc07.py ${EXP_DIR}/SSD
 
 echo ---------------------------------------------------------------------
 echo showing the solver file:
-cat "output/${EXP_DIR}/solver.prototxt"
+cat "output/${EXP_DIR}/SSD/solver.prototxt"
+echo ---------------------------------------------------------------------
+time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
+	--solver output/${EXP_DIR}/SSD/solver.prototxt \
+	--weights data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel \
+	--imdb ${TRAIN_IMDB} \
+	--iters ${ITERS} \
+	--cfg experiments/cfgs/ssd.yml \
+	${EXTRA_ARGS} \
+	TRAIN.PROPOSAL_METHOD pseudo_gt \
+	TRAIN.PSEUDO_PATH output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_2_iter_10/detections_o.pkl
+
+exit 0
+
+
+#第三步
+python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL
+
+echo ---------------------------------------------------------------------
+echo showing the solver file:
+cat "output/${EXP_DIR}/FWSL/solver.prototxt"
 echo ---------------------------------------------------------------------
 time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
-	--solver output/${EXP_DIR}/solver.prototxt \
+	--solver output/${EXP_DIR}/FWSL/solver.prototxt \
 	--weights data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel,data/imagenet_models/fc6fc7fc8wsl.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \

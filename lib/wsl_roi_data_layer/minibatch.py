@@ -67,14 +67,6 @@ def get_minibatch(roidb, num_classes):
         # vis(img, roi, show_name='distortion')
 
         #-------------------------------------------------------------
-        # crop_bbox is define as RoIs with form (x1,y1,x2,y2)
-        # if cfg.TRAIN.USE_CROP:
-        # img, crop_bbox = utils.im_transforms.ApplyCrop(img)
-        # else:
-        # crop_bbox = np.array(
-        # [0, 0, img.shape[0] - 1, img.shape[1] - 1], dtype=np.uint16)
-
-        #-------------------------------------------------------------
         # expand_bbox is define as RoIs with form (x1,y1,x2,y2)
         if cfg.TRAIN.USE_EXPAND:
             img, expand_bbox = utils.im_transforms.ApplyExpand(img)
@@ -93,8 +85,9 @@ def get_minibatch(roidb, num_classes):
                 roi = _project_im_rois(roi, sampled_bbox)
         # vis(img, roi, show_name='sample')
 
+        # crop_bbox is define as RoIs with form (x1,y1,x2,y2)
         if cfg.TRAIN.USE_CROP:
-            img, crop_bbox = utils.im_transforms.ApplyCrop_old(img)
+            img, crop_bbox = utils.im_transforms.ApplyCrop(img)
             roi = _project_im_rois(roi, crop_bbox)
         # vis(img, roi, show_name='crop')
 
@@ -246,34 +239,6 @@ def _project_im_rois(roi, crop_bbox, img_scale=[1, 1]):
     return roi
 
 
-def _project_img_roi_new(roi, score_or_label, src_bbox):
-    num_roi = roi.shape[0]
-    roi_ = []
-    score_or_label_ = []
-    for i in range(num_roi):
-        roi_this = roi[i, :]
-        score_or_label_this = score_or_label[i]
-        # if utils.im_transforms.MeetEmitConstraint(src_bbox, roi_this):
-        if True:
-            roi_.append(roi_this)
-            score_or_label_.append(score_or_label_this)
-    roi = np.array(roi_, dtype=np.float32)
-    score_or_label = np.array(score_or_label_, dtype=np.float32)
-
-    # assert roi.shape[0]>0
-    if roi.shape[0] == 0:
-        return np.zeros(
-            (0, 4), dtype=np.float32), np.zeros(
-                (0), dtype=np.float32)
-
-    roi[:, 0] = roi[:, 0] - src_bbox[0]
-    roi[:, 1] = roi[:, 1] - src_bbox[1]
-    roi[:, 2] = roi[:, 2] - src_bbox[0]
-    roi[:, 3] = roi[:, 3] - src_bbox[1]
-
-    return roi, score_or_label
-
-
 def get_inner_outer_roi(im_roi, ratio):
     assert ratio > 1, 'ratio should be lager than one in get_inner_outer_roi'
     roi = im_roi.astype(np.float32, copy=True)
@@ -326,7 +291,7 @@ def vis(img,
 
     im = im.transpose(channel_swap)
 
-    im += pixel_means
+    im += pixel_means.astype(im.dtype)
     im = im.astype(np.uint8).copy()
 
     height = im.shape[0]

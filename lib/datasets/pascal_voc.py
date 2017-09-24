@@ -174,7 +174,7 @@ class pascal_voc(imdb):
         # the VOC result file is 1-based indices
 
         cache_file = cfg.TRAIN.PSEUDO_PATH
-        assert os.path.exists(cache_file)
+        assert os.path.exists(cache_file),cache_file
         with open(cache_file, 'rb') as fid:
             roidb = cPickle.load(fid)
         print '{} pseudo gt roidb loaded from {}'.format(self.name, cache_file)

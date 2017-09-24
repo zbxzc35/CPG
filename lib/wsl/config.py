@@ -34,11 +34,11 @@ __C.TRAIN.ROIS_PER_IM = 10000
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
 
-__C.TRAIN.USE_DISTORTION_OLD = True
+__C.TRAIN.USE_DISTORTION_OLD = False
 __C.TRAIN.SATURATION = 1.5
 __C.TRAIN.EXPOSURE = 1.5
 
-__C.TRAIN.USE_DISTORTION = False
+__C.TRAIN.USE_DISTORTION = True
 __C.TRAIN.brightness_prob = 0.0
 __C.TRAIN.brightness_delta = 32
 __C.TRAIN.contrast_prob = 0.0
@@ -58,7 +58,7 @@ __C.TRAIN.USE_EXPAND = False
 __C.TRAIN.expand_prob = 0.5
 __C.TRAIN.max_expand_ratio = 4.0
 
-__C.TRAIN.USE_SAMPLE = False
+__C.TRAIN.USE_SAMPLE = True
 __C.TRAIN.batch_sampler = [
     edict({
         'sampler': {
@@ -76,7 +76,7 @@ __C.TRAIN.batch_sampler = [
     }),
 ]
 
-__C.TRAIN.USE_CROP = True
+__C.TRAIN.USE_CROP = False
 __C.TRAIN.CROP = 0.9
 
 # __C.TRAIN.INTERP_MODEL = ['LINEAR', 'AREA', 'NEAREST', 'CUBIC', 'LANCZOS4']
