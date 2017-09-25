@@ -90,8 +90,8 @@ time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
 	--cfg experiments/cfgs/cpg.yml \
 	${EXTRA_ARGS} \
 	EXP_DIR ${EXP_DIR}/CPG \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+	TRAIN.SCALES [512] \
+	TEST.SCALES [512]
 
 set +x
 NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
@@ -104,8 +104,8 @@ time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--cfg experiments/cfgs/cpg.yml \
 	${EXTRA_ARGS}
 EXP_DIR ${EXP_DIR}/CPG \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+	TRAIN.SCALES [512] \
+	TEST.SCALES [512]
 
 time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
@@ -114,12 +114,12 @@ time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--cfg experiments/cfgs/cpg.yml \
 	${EXTRA_ARGS}
 EXP_DIR ${EXP_DIR}/CPG \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+	TRAIN.SCALES [512] \
+	TEST.SCALES [512]
 
 #=========================================================================
 #第二步
-python ./tools/fwsl/ssd_pascalvoc07.py ${EXP_DIR}/SSD
+python ./tools/fwsl/ssd_pascalvoc07_512.py ${EXP_DIR}/SSD
 
 echo ---------------------------------------------------------------------
 echo showing the solver file:
@@ -137,7 +137,7 @@ time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
 
 #=========================================================================
 #第三步
-python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL
+python ./tools/fwsl/fwsl_pascalvoc07_512.py ${EXP_DIR}/FWSL
 
 echo ---------------------------------------------------------------------
 echo showing the solver file:
@@ -151,5 +151,5 @@ time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
 	--cfg experiments/cfgs/fwsl.yml \
 	${EXTRA_ARGS} \
 	EXP_DIR ${EXP_DIR}/FWSL \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+	TRAIN.SCALES [512] \
+	TEST.SCALES [512]

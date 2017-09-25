@@ -54,7 +54,7 @@ __C.TRAIN.USE_EXPAND = False
 __C.TRAIN.expand_prob = 0.5
 __C.TRAIN.max_expand_ratio = 4.0
 
-__C.TRAIN.USE_SAMPLE = True
+__C.TRAIN.USE_SAMPLE = False
 __C.TRAIN.batch_sampler = [
     edict({
         'sampler': {
@@ -71,6 +71,9 @@ __C.TRAIN.batch_sampler = [
         'max_sample': 1,
     }),
 ]
+
+__C.TRAIN.USE_CROP = True
+__C.TRAIN.CROP = 0.9
 
 __C.TRAIN.INTERP_MODEL = ['LINEAR', 'AREA', 'NEAREST', 'CUBIC', 'LANCZOS4']
 

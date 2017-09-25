@@ -184,13 +184,6 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         'max_num_im_cpg': 2 * 5011 * 20,
     }
 
-    cross_entropy_loss_param = {
-        'display': 1280,
-    }
-    loss_param = {
-        # 'normalization': normalization_mode,
-    }
-
     tmp_net = {}
     for i in range(5):
         from_layer = net.keys()[-1]
@@ -307,7 +300,37 @@ def AddExtraLayers_cpg(net, lr_mult=1):
     net['score_neg'] = L.PolarConstraint(
         *from_layers, polar=False, propagate_down=[True, False])
 
-    from_layers = [net['score_pos'], net['roi_num']]
+    for key in tmp_net.keys():
+        net[key] = tmp_net[key]
+
+    return net
+
+
+def AddExtraLayers_cpg_loss(net):
+    cross_entropy_loss_param = {
+        'display': 1280,
+    }
+    loss_param = {
+        # 'normalization': normalization_mode,
+    }
+
+    from_layers = [net['bbox_score'], net['cpg_roi_select']]
+    net['bbox_score_final'] = L.Eltwise(
+        *from_layers,
+        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
+
+    from_layers = [
+        net['bbox_score_final'], net['roi_normalized'], net['label'],
+        net['roi'], net['detection_out']
+    ]
+    net['pseudo_label'], net['roi_cls'] = L.PseudoLabel(*from_layers, ntop=2)
+
+    from_layers = [net['score_pos'], net['roi_cls']]
+    net['score_pos_final'] = L.Eltwise(
+        *from_layers,
+        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
+
+    from_layers = [net['score_pos_final'], net['roi_num']]
     net['cls_pos'] = L.RoIScorePooling(
         *from_layers,
         pool=caffe_pb2.RoIScorePoolingParameter.PoolMethod.Value('SUM'),
@@ -343,19 +366,6 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         *from_layers,
         ntop=0,
         propagate_down=[False, False, False, False, False])
-
-    from_layers = [net['bbox_score'], net['cpg_roi_select']]
-    net['bbox_score_final'] = L.Eltwise(
-        *from_layers,
-        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
-
-    from_layers = [
-        net['bbox_score_final'], net['roi_normalized'], net['label']
-    ]
-    net['pseudo_label'] = L.PseudoLabel(*from_layers)
-
-    for key in tmp_net.keys():
-        net[key] = tmp_net[key]
 
     return net
 
@@ -534,7 +544,8 @@ else:
 # job_name = "SSD_{}".format(resize)
 job_name = sys.argv[1]
 # The name of the model. Modify it if you want.
-model_name = "VGG_VOC2007_{}".format(job_name)
+# model_name = "VGG_VOC2007_{}".format(job_name)
+model_name = "VGG_VOC2007"
 
 # Directory which stores the model .prototxt file.
 save_dir = "output/{}".format(job_name)
@@ -720,6 +731,20 @@ det_out_param = {
     'code_type': code_type,
 }
 
+# parameters for generating detection output.
+det_out_train_param = {
+    'num_classes': num_classes,
+    'share_location': share_location,
+    'background_label_id': background_label_id,
+    'nms_param': {
+        'nms_threshold': 0.45,
+        'top_k': 400
+    },
+    'keep_top_k': 200,
+    'confidence_threshold': 0.01,
+    'code_type': code_type,
+}
+
 # parameters for evaluating detection results.
 det_eval_param = {
     'num_classes': num_classes,
@@ -741,9 +766,14 @@ make_if_not_exist(snapshot_dir)
 
 # Create train net.
 net = caffe.NetSpec()
-#net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size_per_device,
-#        train=True, output_label=True, label_map_file=label_map_file,
-#        transform_param=train_transform_param, batch_sampler=batch_sampler)
+# net.data, net.label = CreateAnnotatedDataLayer(
+# train_data,
+# batch_size=batch_size_per_device,
+# train=True,
+# output_label=True,
+# label_map_file=label_map_file,
+# transform_param=train_transform_param,
+# batch_sampler=batch_sampler)
 net.data, net.roi, net.roi_normalized, net.roi_score, net.roi_num, net.label = L.Python(
     ntop=6,
     module='wsl_roi_anno_data_layer.layer',
@@ -780,6 +810,26 @@ mbox_layers = CreateMultiBoxHead(
     kernel_size=3,
     pad=1,
     lr_mult=lr_mult)
+
+conf_name = "mbox_conf"
+if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
+    reshape_name = "{}_reshape".format(conf_name)
+    net[reshape_name] = L.Reshape(
+        net[conf_name], shape=dict(dim=[0, -1, num_classes]))
+    softmax_name = "{}_softmax".format(conf_name)
+    net[softmax_name] = L.Softmax(net[reshape_name], axis=2)
+    flatten_name = "{}_flatten".format(conf_name)
+    net[flatten_name] = L.Flatten(net[softmax_name], axis=1)
+    mbox_layers[1] = net[flatten_name]
+elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
+    sigmoid_name = "{}_sigmoid".format(conf_name)
+    net[sigmoid_name] = L.Sigmoid(net[conf_name])
+    mbox_layers[1] = net[sigmoid_name]
+
+net.detection_out = L.DetectionOutput(
+    *mbox_layers, detection_output_param=det_out_train_param)
+
+AddExtraLayers_cpg_loss(net)
 
 # Create the MultiBoxLossLayer.
 name = "mbox_loss"

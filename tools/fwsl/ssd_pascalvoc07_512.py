@@ -19,11 +19,11 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
     use_relu = True
 
     # Add additional convolutional layers.
-    # 19 x 19
+    # 32 x 32
     from_layer = net.keys()[-1]
 
     # TODO(weiliu89): Construct the name using the last layer to avoid duplication.
-    # 10 x 10
+    # 16 x 16
     out_layer = "conv6_1"
     ConvBNLayer(
         net,
@@ -51,7 +51,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         2,
         lr_mult=lr_mult)
 
-    # 5 x 5
+    # 8 x 8
     from_layer = out_layer
     out_layer = "conv7_1"
     ConvBNLayer(
@@ -80,7 +80,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         2,
         lr_mult=lr_mult)
 
-    # 3 x 3
+    # 4 x 4
     from_layer = out_layer
     out_layer = "conv8_1"
     ConvBNLayer(
@@ -105,11 +105,11 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         use_relu,
         256,
         3,
-        0,
         1,
+        2,
         lr_mult=lr_mult)
 
-    # 1 x 1
+    # 2 x 2
     from_layer = out_layer
     out_layer = "conv9_1"
     ConvBNLayer(
@@ -134,7 +134,36 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         use_relu,
         256,
         3,
+        1,
+        2,
+        lr_mult=lr_mult)
+
+    # 1 x 1
+    from_layer = out_layer
+    out_layer = "conv10_1"
+    ConvBNLayer(
+        net,
+        from_layer,
+        out_layer,
+        use_batchnorm,
+        use_relu,
+        128,
+        1,
         0,
+        1,
+        lr_mult=lr_mult)
+
+    from_layer = out_layer
+    out_layer = "conv10_2"
+    ConvBNLayer(
+        net,
+        from_layer,
+        out_layer,
+        use_batchnorm,
+        use_relu,
+        256,
+        4,
+        1,
         1,
         lr_mult=lr_mult)
 
@@ -160,8 +189,8 @@ train_data = "data/VOC2007/lmdb/VOC2007_trainval_lmdb"
 # The database file for testing data. Created by data/VOC2007/create_data.sh
 test_data = "data/VOC2007/lmdb/VOC2007_test_lmdb"
 # Specify the batch sampler.
-resize_width = 300
-resize_height = 300
+resize_width = 512
+resize_height = 512
 resize = "{}x{}".format(resize_width, resize_height)
 batch_sampler = [
     {
@@ -381,18 +410,19 @@ loss_param = {
 
 # parameters for generating priors.
 # minimum dimension of input image
-min_dim = 300
-# conv4_3 ==> 38 x 38
-# fc7 ==> 19 x 19
-# conv6_2 ==> 10 x 10
-# conv7_2 ==> 5 x 5
-# conv8_2 ==> 3 x 3
-# conv9_2 ==> 1 x 1
+min_dim = 512
+# conv4_3 ==> 64 x 64
+# fc7 ==> 32 x 32
+# conv6_2 ==> 16 x 16
+# conv7_2 ==> 8 x 8
+# conv8_2 ==> 4 x 4
+# conv9_2 ==> 2 x 2
+# conv10_2 ==> 1 x 1
 mbox_source_layers = [
-    'conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2'
+    'conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2', 'conv10_2'
 ]
 # in percent %
-min_ratio = 20
+min_ratio = 15
 max_ratio = 90
 step = int(math.floor((max_ratio - min_ratio) / (len(mbox_source_layers) - 2)))
 min_sizes = []
@@ -400,12 +430,12 @@ max_sizes = []
 for ratio in xrange(min_ratio, max_ratio + 1, step):
     min_sizes.append(min_dim * ratio / 100.)
     max_sizes.append(min_dim * (ratio + step) / 100.)
-min_sizes = [min_dim * 10 / 100.] + min_sizes
-max_sizes = [min_dim * 20 / 100.] + max_sizes
-steps = [8, 16, 32, 64, 100, 300]
-aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
+min_sizes = [min_dim * 7 / 100.] + min_sizes
+max_sizes = [min_dim * 15 / 100.] + max_sizes
+steps = [8, 16, 32, 64, 128, 256, 512]
+aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]]
 # L2 normalize conv4_3.
-normalizations = [20, -1, -1, -1, -1, -1]
+normalizations = [20, -1, -1, -1, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
     prior_variance = [0.1, 0.1, 0.2, 0.2]
