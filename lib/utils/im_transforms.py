@@ -58,13 +58,14 @@ def SampleBBox(sampler, img_shape):
     w_off = npr.uniform(0.0, 1.0 - bbox_width)
 
     #---------------------------------------
-    bbox_height = int(bbox_height * img_shape[0])
-    bbox_width = int(bbox_width * img_shape[1])
-    h_off = int(h_off * img_shape[0])
-    w_off = int(w_off * img_shape[1])
+    bbox_height = bbox_height * img_shape[0]
+    bbox_width = bbox_width * img_shape[1]
+    h_off = h_off * img_shape[0]
+    w_off = w_off * img_shape[1]
 
     sampled_bbox = np.array(
-        [w_off, h_off, w_off + bbox_width - 1, h_off + bbox_height - 1])
+        [w_off, h_off, w_off + bbox_width - 1, h_off + bbox_height - 1],
+        dtype=np.uint16)
     return sampled_bbox
 
 
@@ -130,10 +131,10 @@ def Crop(img, crop_bbox):
     # x2 = 1.0 * crop_bbox[2] * img_shape[1]
     # y2 = 1.0 * crop_bbox[3] * img_shape[0]
 
-    x1 = int(crop_bbox[0]) + 1
-    y1 = int(crop_bbox[1]) + 1
-    x2 = int(crop_bbox[2]) + 1
-    y2 = int(crop_bbox[3]) + 1
+    x1 = crop_bbox[0]
+    y1 = crop_bbox[1]
+    x2 = crop_bbox[2]
+    y2 = crop_bbox[3]
 
     assert x1 >= 0, x1
     assert y1 >= 0, y1

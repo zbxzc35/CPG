@@ -102,8 +102,8 @@ time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
 	--cfg experiments/cfgs/cpg.yml \
-	${EXTRA_ARGS}
-EXP_DIR ${EXP_DIR}/CPG \
+	${EXTRA_ARGS} \
+	EXP_DIR ${EXP_DIR}/CPG \
 	TRAIN.SCALES [300] \
 	TEST.SCALES [300]
 
@@ -112,8 +112,8 @@ time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 	--net ${NET_FINAL} \
 	--imdb ${TRAIN_IMDB} \
 	--cfg experiments/cfgs/cpg.yml \
-	${EXTRA_ARGS}
-EXP_DIR ${EXP_DIR}/CPG \
+	${EXTRA_ARGS} \
+	EXP_DIR ${EXP_DIR}/CPG \
 	TRAIN.SCALES [300] \
 	TEST.SCALES [300]
 

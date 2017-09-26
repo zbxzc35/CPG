@@ -104,13 +104,14 @@ layer { name: "cls_score" type: "RoIScorePooling" bottom: "bbox_score" bottom: "
 layer { name: "mil" type: "MIL" bottom: "cls_score" bottom: "cls_score" bottom: "rois" bottom: "bbox_score"
 	top: "cpg_roi_select"
 	cpg_param { is_cpg: false mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
-	start_layer_name: "conv1_1" end_layer_name: "cls_score" ignore_label: 20
+        max_num_im_cpg: 100220, ignore_label: 20
 	cpg_blob_name: "data"
 	#cpg_blob_name: "conv1_2"
 	#cpg_blob_name: "conv2_2"
 	#cpg_blob_name: "conv3_3"
 	#cpg_blob_name: "conv4_3"
 	#cpg_blob_name: "conv5_3"
+	predict_blob_name: "cls_score"
 	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
 	mass_threshold: 0.2 density_threshold: 0.0 fg_threshold: 0.1 bg_threshold: 0.001 }}
 

@@ -122,13 +122,14 @@ layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "ro
 	top: "cpg_roi_select"
 	top: "labels_pos" top: "labels_neg"
 	cpg_param { is_cpg: false mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
-	start_layer_name: "conv1_1" end_layer_name: "cls_score" ignore_label: 20
+        max_num_im_cpg: 100220, ignore_label: 20
 	cpg_blob_name: "data"
 	#cpg_blob_name: "conv1_2"
 	#cpg_blob_name: "conv2_2"
 	#cpg_blob_name: "conv3_3"
 	#cpg_blob_name: "conv4_3"
 	#cpg_blob_name: "conv5_3"
+	predict_blob_name: "cls_score"
 	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
 	mass_threshold: 0.2 density_threshold: 0.0 fg_threshold: 0.1 bg_threshold: 0.001 }}
 
@@ -149,11 +150,11 @@ layer { name: "loss_pos" type: "CrossEntropyLoss" bottom: "cls_pos" bottom: "lab
 layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "labels_neg" top: "loss_neg" loss_weight: 1
 	propagate_down: true propagate_down: false cross_entropy_loss_param { display: 1280 }}
 
-#layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
-#	param { lr_mult: 0 decay_mult: 0 }
-#	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
-#	center_filler { type: "gaussian" }}
-#	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
+layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
+	param { lr_mult: 0 decay_mult: 0 }
+	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 5 display: 1280 update: 128
+        max_num_im_center: 0, center_filler { type: "gaussian" }}
+	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
 
 #-----------------------------------STATISTICS----------------------------------------------------------------
 layer { name: "statistics" type: "Statistics" bottom: "labels" bottom: "cls_score" bottom: "cls_pos" bottom: "cls_neg"
