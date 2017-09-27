@@ -164,7 +164,7 @@ def AddExtraLayers_cpg(net, lr_mult=1):
     }
 
     cpg_train_param = {
-        'is_cpg': True,
+        'is_cpg': False,
         'mode': caffe_pb2.CPGParameter.Mode.Value('CPG_POOLING'),
         'is_order': False,
         'is_contrast': False,
@@ -321,10 +321,13 @@ def AddExtraLayers_cpg_loss(net):
 
     from_layers = [
         net['bbox_score_final'], net['roi_normalized'], net['label'],
-        net['roi'], net['detection_out']
+        net['detection_out']
     ]
     net['pseudo_label'], net['roi_cls'] = L.PseudoLabel(*from_layers, ntop=2)
 
+    # net['roi_cls_softmax'] = L.Softmax(net['roi_cls'], axis=1)
+
+    # from_layers = [net['score_pos'], net['roi_cls_softmax']]
     from_layers = [net['score_pos'], net['roi_cls']]
     net['score_pos_final'] = L.Eltwise(
         *from_layers,
@@ -738,9 +741,9 @@ det_out_train_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k': 400
+        'top_k': 4096
     },
-    'keep_top_k': 200,
+    'keep_top_k': 2048,
     'confidence_threshold': 0.01,
     'code_type': code_type,
 }

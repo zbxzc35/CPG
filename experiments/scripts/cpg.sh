@@ -84,18 +84,6 @@ time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
 	--cfg experiments/cfgs/cpg.yml \
 	${EXTRA_ARGS}
 
-#echo ---------------------------------------------------------------------
-#echo showing the solver file:
-#cat "models/${PT_DIR}/${NET}/cpg/solver2.prototxt"
-#echo ---------------------------------------------------------------------
-#time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-	#--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
-	#--weights output/${EXP_DIR}/${TRAIN_IMDB}/${NET}_iter_${ITERS}.caffemodel \
-	#--imdb ${TRAIN_IMDB} \
-	#--iters ${ITERS2} \
-	#--cfg experiments/cfgs/cpg.yml \
-	#${EXTRA_ARGS}
-
 #--------------------------------------------------------------------------
 set +x
 NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`

@@ -139,13 +139,19 @@ time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
 #第三步
 python ./tools/fwsl/fwsl_pascalvoc07_512.py ${EXP_DIR}/FWSL
 
+./tools/fwsl/fc6fc7_to_wsl.py \
+	models/${PT_DIR}/${NET}/cpg/test.prototxt \
+	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30.caffemodel \
+	models/${PT_DIR}/${NET}/cpg/predict_module.prototxt \
+	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel
+
 echo ---------------------------------------------------------------------
 echo showing the solver file:
 cat "output/${EXP_DIR}/FWSL/solver.prototxt"
 echo ---------------------------------------------------------------------
 time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
 	--solver output/${EXP_DIR}/FWSL/solver.prototxt \
-	--weights output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_2_iter_10.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel \
+	--weights output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fwsl.yml \
