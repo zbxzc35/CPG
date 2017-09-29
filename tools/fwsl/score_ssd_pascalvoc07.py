@@ -13,8 +13,6 @@ import stat
 import subprocess
 import sys
 
-import itertools
-
 
 # Add extra layers on top of a "base" network (e.g. VGGNet or Inception).
 def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
@@ -22,8 +20,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
 
     # Add additional convolutional layers.
     # 19 x 19
-    # from_layer = net.keys()[-1]
-    from_layer = 'fc7'
+    from_layer = net.keys()[-1]
 
     # TODO(weiliu89): Construct the name using the last layer to avoid duplication.
     # 10 x 10
@@ -144,237 +141,17 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
     return net
 
 
-def AddExtraLayers_cpg(net, lr_mult=1):
-    use_relu = True
-
-    kwargs = {
-        'param': [
-            dict(lr_mult=lr_mult, decay_mult=1),
-            dict(lr_mult=2 * lr_mult, decay_mult=0)
-        ],
-    }
-    kwargs_new = {
-        'param': [
-            dict(lr_mult=lr_mult, decay_mult=1),
-            dict(lr_mult=2 * lr_mult, decay_mult=0)
-        ],
-        'weight_filler':
-        dict(type='xavier'),
-        'bias_filler':
-        dict(type='constant', value=0),
-    }
-
-    cpg_train_param = {
-        'is_cpg': False,
-        'mode': caffe_pb2.CPGParameter.Mode.Value('CPG_POOLING'),
-        'is_order': False,
-        'is_contrast': False,
-        'debug_info': False,
-        # 'start_layer_name': "conv1_1",
-        # 'end_layer_name': "cls_score",
-        'ignore_label': 20,
-        'cpg_blob_name': "data",
-        'predict_blob_name': "cls_score",
-        'predict_threshold': 0.7,
-        'predict_order': 0.0,
-        'crf_threshold': 0.95,
-        'mass_threshold': 0.2,
-        'density_threshold': 0.0,
-        'fg_threshold': 0.1,
-        'bg_threshold': 0.001,
-        'max_num_im_cpg': 2 * 5011 * 20,
-    }
-
-    from_layer = 'conv5_3'
-
-    out_layer = 'roi_pool_conv5'
-    RoIPoolingLayer(net, from_layer, 'roi', out_layer, 7, 7, 0.0625)
-
-    from_layer = out_layer
-    out_layer = 'boost'
-    net[out_layer] = L.Scale(net[from_layer], net['roi_score'], axis=0)
-
-    from_layer = out_layer
-    out_layer = 'fc6_wsl'
-    FcReluDropLayer(
-        net,
-        from_layer,
-        out_layer,
-        'relu6_wsl',
-        'drop6_wsl',
-        4096,
-        lr_mult=lr_mult)
-
-    from_layer = out_layer
-    out_layer = 'fc7_wsl'
-    FcReluDropLayer(
-        net,
-        from_layer,
-        out_layer,
-        'relu7_wsl',
-        'drop7_wsl',
-        4096,
-        lr_mult=lr_mult)
-
-    if False:
-        from_layer = out_layer
-        out_layer = 'fc6_wsl'
-        net[out_layer] = L.Convolution(
-            net[from_layer],
-            num_output=4096,
-            kernel_size=7,
-            pad=0,
-            stride=1,
-            **kwargs)
-        net['relu6_wsl'] = L.ReLU(net[out_layer], in_place=True)
-        net['drop6_wsl'] = L.Dropout(
-            net[out_layer], in_place=True, dropout_ratio=0.5)
-
-        from_layer = out_layer
-        out_layer = 'fc7_wsl'
-        net[out_layer] = L.Convolution(
-            net[from_layer],
-            num_output=4096,
-            kernel_size=1,
-            pad=0,
-            stride=1,
-            **kwargs)
-        net['relu7_wsl'] = L.ReLU(net[out_layer], in_place=True)
-        net['drop7_wsl'] = L.Dropout(
-            net[out_layer], in_place=True, dropout_ratio=0.5)
-
-    from_layer = 'fc7_wsl'
-    out_layers = ['fc8c', 'fc8d']
-    for out_layer in out_layers:
-        FcReluDropLayer(
-            net,
-            from_layer,
-            out_layer,
-            '',
-            '',
-            20,
-            lr_mult=lr_mult,
-            has_filler=True)
-
-    from_layers = out_layers
-    out_layers = ['alpha_cls', 'alpha_det']
-    axises = [1, 0]
-    for from_layer, out_layer, axis in itertools.izip(from_layers, out_layers,
-                                                      axises):
-        net[out_layer] = L.Softmax(net[from_layer], axis=axis)
-
-    from_layers = []
-    for l in out_layers:
-        from_layers.append(net[l])
-    out_layer = 'bbox_score'
-    net[out_layer] = L.Eltwise(
-        *from_layers,
-        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
-
-    from_layers = [net['bbox_score'], net['roi_num']]
-    out_layer = 'cls_score'
-    net[out_layer] = L.RoIScorePooling(
-        *from_layers,
-        pool=caffe_pb2.RoIScorePoolingParameter.PoolMethod.Value('SUM'),
-        axis=0)
-
-    from_layers = [
-        net['label'], net['cls_score'], net['roi'], net['bbox_score']
-    ]
-    net['cpg_roi_select'], net['label_pos'], net['label_neg'] = L.MIL(
-        *from_layers, cpg_param=cpg_train_param, ntop=3)
-
-    from_layers = [net['bbox_score'], net['cpg_roi_select']]
-    net['score_pos'] = L.PolarConstraint(
-        *from_layers, polar=True, propagate_down=[True, False])
-
-    from_layers = [net['bbox_score'], net['cpg_roi_select']]
-    net['score_neg'] = L.PolarConstraint(
-        *from_layers, polar=False, propagate_down=[True, False])
-
-    return net
-
-
-def AddExtraLayers_cpg_loss(net):
-    cross_entropy_loss_param = {
-        'display': 1280,
-    }
-    loss_param = {
-        # 'normalization': normalization_mode,
-    }
-
-    from_layers = [net['bbox_score'], net['cpg_roi_select']]
-    net['bbox_score_final'] = L.Eltwise(
-        *from_layers,
-        operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
-
-    from_layers = [
-        net['bbox_score_final'], net['roi_normalized'], net['label'],
-        net['data'],
-    ]
-    net['pseudo_label'] = L.PseudoLabel(*from_layers, ntop=1)
-
-    # net['roi_cls_softmax'] = L.Softmax(net['roi_cls'], axis=1)
-
-    # from_layers = [net['score_pos'], net['roi_cls_softmax']]
-    # from_layers = [net['score_pos'], net['roi_cls']]
-    # net['score_pos_final'] = L.Eltwise(
-        # *from_layers,
-        # operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
-
-    from_layers = [net['score_pos'], net['roi_num']]
-    net['cls_pos'] = L.RoIScorePooling(
-        *from_layers,
-        pool=caffe_pb2.RoIScorePoolingParameter.PoolMethod.Value('SUM'),
-        axis=0)
-
-    from_layers = [net['score_neg'], net['roi_num']]
-    net['cls_neg'] = L.RoIScorePooling(
-        *from_layers,
-        pool=caffe_pb2.RoIScorePoolingParameter.PoolMethod.Value('SUM'),
-        axis=0)
-
-    net['loss_pos'] = L.CrossEntropyLoss(
-        net['cls_pos'],
-        net['label_pos'],
-        loss_weight=1,
-        cross_entropy_loss_param=cross_entropy_loss_param,
-        loss_param=loss_param,
-        propagate_down=[True, False])
-
-    net['loss_neg'] = L.CrossEntropyLoss(
-        net['cls_neg'],
-        net['label_neg'],
-        loss_weight=1,
-        cross_entropy_loss_param=cross_entropy_loss_param,
-        loss_param=loss_param,
-        propagate_down=[True, False])
-
-    from_layers = [
-        net['label'], net['cls_score'], net['cls_pos'], net['cls_neg'],
-        net['cpg_roi_select']
-    ]
-    net['statistics'] = L.Statistics(
-        *from_layers,
-        ntop=0,
-        propagate_down=[False, False, False, False, False])
-
-    return net
-
-
 ### Modify the following parameters accordingly ###
+# Notice: we do evaluation by setting the solver parameters approximately.
+# The reason that we do not use ./build/tools/caffe test ... is because it
+# only supports testing for classification problem now.
 # The directory which contains the caffe code.
 # We assume you are running the script at the CAFFE_ROOT.
 caffe_root = os.getcwd()
 
 # Set true if you want to start training right after generating all files.
 run_soon = True
-run_soon = False
-# Set true if you want to load from most recently saved snapshot.
-# Otherwise, we will load from the pretrain_model defined below.
-resume_training = True
-# If true, Remove old model files.
-remove_old_models = False
+# run_soon = False
 
 # The database file for training data. Created by data/VOC2007/create_data.sh
 train_data = "data/VOC2007/lmdb/VOC2007_trainval_lmdb"
@@ -532,7 +309,7 @@ else:
     # A learning rate for batch_size = 1, num_gpus = 1.
     base_lr = 0.00004
 
-# Modify the job name if you want.
+# The job name should be same as the name used in examples/ssd/ssd_pascal.py.
 # job_name = "SSD_{}".format(resize)
 job_name = sys.argv[1]
 # The name of the model. Modify it if you want.
@@ -540,13 +317,13 @@ job_name = sys.argv[1]
 model_name = "VGG_VOC2007"
 
 # Directory which stores the model .prototxt file.
-save_dir = "output/{}".format(job_name)
-# Directory which stores the snapshot of models.
+save_dir = "output/{}_score".format(job_name)
+# Directory which stores the snapshot of trained models.
 snapshot_dir = "output/{}".format(job_name)
 # Directory which stores the job script and log file.
-job_dir = "experiments/logs/{}".format(job_name)
+job_dir = "experiments/logs/{}_score".format(job_name)
 # Directory which stores the detection results.
-output_result_dir = "{}/data/VOCdevkit/results/VOC2007/{}/Main".format(
+output_result_dir = "{}/data/VOCdevkit/results/VOC2007/{}_score/Main".format(
     os.environ['HOME'], job_name)
 
 # model definition files.
@@ -558,13 +335,26 @@ solver_file = "{}/solver.prototxt".format(save_dir)
 snapshot_prefix = "{}/{}".format(snapshot_dir, model_name)
 # job script path.
 job_file = "{}/{}.sh".format(job_dir, model_name)
-# readme path.
-readme_file = "{}/README.md".format(job_dir)
+
+# Find most recent snapshot.
+max_iter = 0
+print(snapshot_dir)
+for file in os.listdir(snapshot_dir):
+    if file.endswith(".caffemodel"):
+        basename = os.path.splitext(file)[0]
+        print(basename)
+        iter = int(basename.split("{}_iter_".format(model_name))[1])
+        if iter > max_iter:
+            max_iter = iter
+
+if max_iter == 0:
+    print("Cannot find snapshot in {}".format(snapshot_dir))
+    sys.exit()
 
 # Stores the test image names and sizes. Created by data/VOC2007/create_list.sh
 name_size_file = "data/VOC2007/test_name_size.txt"
-# The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
-pretrain_model = "../../data/imagenet_/VGGNet/VGG_ILSVRC_16_layers_fc_reduced.caffemodel"
+# The resume model.
+pretrain_model = "{}_iter_{}.caffemodel".format(snapshot_prefix, max_iter)
 # Stores LabelMapItem.
 label_map_file = "data/VOC2007/labelmap_voc.prototxt"
 
@@ -637,14 +427,13 @@ clip = False
 
 # Solver parameters.
 # Defining which GPUs to use.
-# gpus = "0,1,2,3"
-gpus = "0"
+gpus = "2"
 gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
-# Divide the mini-batch to different GPUs.
+# The number does not matter since we do not do training with this script.
 batch_size = 1
-accum_batch_size = 128
+accum_batch_size = 1
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
 device_id = 0
@@ -677,28 +466,27 @@ solver_param = {
     # Train parameters
     'base_lr': base_lr,
     'weight_decay': 0.0005,
-    # 'lr_policy': "multistep",
-    # 'stepvalue': [80000, 100000, 120000],
-    'lr_policy': "step",
-    'stepsize': 7820,
+    'lr_policy': "multistep",
+    'stepvalue': [80000, 100000, 120000],
     'gamma': 0.1,
     'momentum': 0.9,
     'iter_size': iter_size,
-    'max_iter': 120000,
-    'snapshot': 10000,
+    'max_iter': 0,
+    'snapshot': 0,
     'display': 10,
     'average_loss': 10,
     # 'type': "SGD",
     'solver_mode': solver_mode,
     'device_id': device_id,
     'debug_info': False,
-    'snapshot_after_train': True,
+    'snapshot_after_train': False,
     # Test parameters
     'test_iter': [test_iter],
     'test_interval': 10000,
     'eval_type': "detection",
     'ap_version': "11point",
-    'test_initialization': False,
+    'test_initialization': True,
+    'show_per_class_result': True,
 }
 
 # parameters for generating detection output.
@@ -708,7 +496,7 @@ det_out_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k': 400
+        'top_k': 2048
     },
     'save_output_param': {
         'output_directory': output_result_dir,
@@ -718,21 +506,7 @@ det_out_param = {
         'name_size_file': name_size_file,
         'num_test_image': num_test_image,
     },
-    'keep_top_k': 200,
-    'confidence_threshold': 0.01,
-    'code_type': code_type,
-}
-
-# parameters for generating detection output.
-det_out_train_param = {
-    'num_classes': num_classes,
-    'share_location': share_location,
-    'background_label_id': background_label_id,
-    'nms_param': {
-        'nms_threshold': 0.45,
-        'top_k': 400
-    },
-    'keep_top_k': 200,
+    'keep_top_k': 1024,
     'confidence_threshold': 0.01,
     'code_type': code_type,
 }
@@ -758,20 +532,27 @@ make_if_not_exist(snapshot_dir)
 
 # Create train net.
 net = caffe.NetSpec()
-# net.data, net.label = CreateAnnotatedDataLayer(
-# train_data,
-# batch_size=batch_size_per_device,
-# train=True,
-# output_label=True,
-# label_map_file=label_map_file,
-# transform_param=train_transform_param,
-# batch_sampler=batch_sampler)
-net.data, net.roi, net.roi_normalized, net.roi_score, net.roi_num, net.label = L.Python(
-    ntop=6,
-    module='wsl_roi_anno_data_layer.layer',
-    layer='RoIDataLayer',
-    param_str="'num_classes': 20")
+net.data, net.label = CreateAnnotatedDataLayer(
+    train_data,
+    batch_size=batch_size_per_device,
+    train=True,
+    output_label=True,
+    label_map_file=label_map_file,
+    transform_param=train_transform_param,
+    batch_sampler=batch_sampler)
+# net.data, net.label = L.Python(
+# ntop=2,
+# module='anno_data_layer.layer',
+# layer='AnnotatedDataLayer',
+# param_str="'num_classes': 20")
 
+# VGGNetBody(
+# net,
+# from_layer='data',
+# fully_conv=True,
+# reduced=True,
+# dilated=True,
+# dropout=False)
 ya_VGGNetBody(
     net,
     from_layer='data',
@@ -781,8 +562,6 @@ ya_VGGNetBody(
     dropout=False,
     freeze_all_layers=True)
 
-AddExtraLayers_cpg(net, lr_mult=lr_mult)
-AddExtraLayers_cpg_loss(net)
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
 mbox_layers = CreateMultiBoxHead(
@@ -804,32 +583,9 @@ mbox_layers = CreateMultiBoxHead(
     pad=1,
     lr_mult=lr_mult)
 
-conf_name = "mbox_conf"
-if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
-    reshape_name = "{}_reshape".format(conf_name)
-    net[reshape_name] = L.Reshape(
-        net[conf_name], shape=dict(dim=[0, -1, num_classes]))
-    softmax_name = "{}_softmax".format(conf_name)
-    net[softmax_name] = L.Softmax(net[reshape_name], axis=2)
-    flatten_name = "{}_flatten".format(conf_name)
-    net[flatten_name] = L.Flatten(net[softmax_name], axis=1)
-    mbox_layers[1] = net[flatten_name]
-elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
-    sigmoid_name = "{}_sigmoid".format(conf_name)
-    net[sigmoid_name] = L.Sigmoid(net[conf_name])
-    mbox_layers[1] = net[sigmoid_name]
-
-net.detection_out = L.DetectionOutput(
-    *mbox_layers, detection_output_param=det_out_train_param)
-
-from_layers = [net['detection_out'], net['data']]
-net['roi_fb'],net['roi_score_fb'],net['roi_num_fb']=L.Feedback(*from_layers,ntop=3)
-
-
-
 # Create the MultiBoxLossLayer.
 name = "mbox_loss"
-mbox_layers.append(net.pseudo_label)
+mbox_layers.append(net.label)
 net[name] = L.MultiBoxLoss(
     *mbox_layers,
     multibox_loss_param=multibox_loss_param,
@@ -937,53 +693,21 @@ with open(solver_file, 'w') as f:
     print(solver, file=f)
 shutil.copy(solver_file, job_dir)
 
-max_iter = 0
-# Find most recent snapshot.
-for file in os.listdir(snapshot_dir):
-    if file.endswith(".solverstate"):
-        basename = os.path.splitext(file)[0]
-        iter = int(basename.split("{}_iter_".format(model_name))[1])
-        if iter > max_iter:
-            max_iter = iter
-
-train_src_param = '--weights="{}" \\\n'.format(pretrain_model)
-if resume_training:
-    if max_iter > 0:
-        train_src_param = '--snapshot="{}_iter_{}.solverstate" \\\n'.format(
-            snapshot_prefix, max_iter)
-
-if remove_old_models:
-    # Remove any snapshots smaller than max_iter.
-    for file in os.listdir(snapshot_dir):
-        if file.endswith(".solverstate"):
-            basename = os.path.splitext(file)[0]
-            iter = int(basename.split("{}_iter_".format(model_name))[1])
-            if max_iter > iter:
-                os.remove("{}/{}".format(snapshot_dir, file))
-        if file.endswith(".caffemodel"):
-            basename = os.path.splitext(file)[0]
-            iter = int(basename.split("{}_iter_".format(model_name))[1])
-            if max_iter > iter:
-                os.remove("{}/{}".format(snapshot_dir, file))
-
 # Create job file.
 with open(job_file, 'w') as f:
     f.write('cd {}\n'.format(caffe_root))
     f.write('./caffe-fwsl/build/tools/caffe train \\\n')
     f.write('--solver="{}" \\\n'.format(solver_file))
-    f.write(train_src_param)
+    f.write('--weights="{}" \\\n'.format(pretrain_model))
     if solver_param['solver_mode'] == P.Solver.GPU:
-        f.write('--gpu {} 2>&1 | tee {}/{}.log\n'.format(
-            gpus, job_dir, model_name))
+        f.write('--gpu {} 2>&1 | tee {}/{}_test{}.log\n'.format(
+            gpus, job_dir, model_name, max_iter))
     else:
         f.write('2>&1 | tee {}/{}.log\n'.format(job_dir, model_name))
 
 # Copy the python script to job_dir.
 py_file = os.path.abspath(__file__)
 shutil.copy(py_file, job_dir)
-
-f = open(readme_file, 'w')
-f.close()
 
 # Run the job.
 os.chmod(job_file, stat.S_IRWXU)

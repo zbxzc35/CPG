@@ -36,10 +36,10 @@ do
 	done
 
 	# Generate image name and size infomation.
-	if [ $dataset == "test" ]
-	then
-		$bash_dir/../../caffe-fwsl/build/tools/get_image_size $root_dir $dst_file $bash_dir/$dataset"_name_size.txt"
-	fi
+	#if [ $dataset == "test" ]
+	#then
+	$bash_dir/../../caffe-fwsl/build/tools/get_image_size $root_dir $dst_file $bash_dir/$dataset"_name_size.txt"
+	#fi
 
 	# Shuffle trainval file.
 	if [ $dataset == "trainval" ]

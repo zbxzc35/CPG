@@ -133,7 +133,7 @@ echo ---------------------------------------------------------------------
 	#--cfg experiments/cfgs/ssd.yml \
 	#${EXTRA_ARGS} \
 	#TRAIN.PROPOSAL_METHOD pseudo_gt \
-	# TRAIN.PSEUDO_PATH output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
+       #  TRAIN.PSEUDO_PATH output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
 
 #=========================================================================
 #第三步
@@ -152,7 +152,7 @@ cat "output/${EXP_DIR}/FWSL/solver.prototxt"
 echo ---------------------------------------------------------------------
 time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
 	--solver output/${EXP_DIR}/FWSL/solver.prototxt \
-	--weights output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_30000.caffemodel \
+	--weights output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fwsl.yml \

@@ -476,6 +476,7 @@ solver_param = {
     'eval_type': "detection",
     'ap_version': "11point",
     'test_initialization': False,
+    'show_per_class_result': True,
 }
 
 # parameters for generating detection output.
@@ -535,13 +536,13 @@ net.data, net.label = L.Python(
     layer='AnnotatedDataLayer',
     param_str="'num_classes': 20")
 
-VGGNetBody(
-    net,
-    from_layer='data',
-    fully_conv=True,
-    reduced=True,
-    dilated=True,
-    dropout=False)
+# VGGNetBody(
+# net,
+# from_layer='data',
+# fully_conv=True,
+# reduced=True,
+# dilated=True,
+# dropout=False)
 ya_VGGNetBody(
     net,
     from_layer='data',
