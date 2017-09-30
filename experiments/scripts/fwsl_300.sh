@@ -133,7 +133,7 @@ echo ---------------------------------------------------------------------
 	#--cfg experiments/cfgs/ssd.yml \
 	#${EXTRA_ARGS} \
 	#TRAIN.PROPOSAL_METHOD pseudo_gt \
-       #  TRAIN.PSEUDO_PATH output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
+	#TRAIN.PSEUDO_PATH output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
 
 #=========================================================================
 #第三步

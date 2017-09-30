@@ -309,7 +309,9 @@ def AddExtraLayers_cpg_loss(net):
         operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
 
     from_layers = [
-        net['bbox_score_final'], net['roi_normalized'], net['label'],
+        net['bbox_score_final'],
+        net['roi_normalized'],
+        net['label'],
         net['data'],
     ]
     net['pseudo_label'] = L.PseudoLabel(*from_layers, ntop=1)
@@ -319,8 +321,8 @@ def AddExtraLayers_cpg_loss(net):
     # from_layers = [net['score_pos'], net['roi_cls_softmax']]
     # from_layers = [net['score_pos'], net['roi_cls']]
     # net['score_pos_final'] = L.Eltwise(
-        # *from_layers,
-        # operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
+    # *from_layers,
+    # operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
 
     from_layers = [net['score_pos'], net['roi_num']]
     net['cls_pos'] = L.RoIScorePooling(
@@ -823,9 +825,8 @@ net.detection_out = L.DetectionOutput(
     *mbox_layers, detection_output_param=det_out_train_param)
 
 from_layers = [net['detection_out'], net['data']]
-net['roi_fb'],net['roi_score_fb'],net['roi_num_fb']=L.Feedback(*from_layers,ntop=3)
-
-
+net['roi_fb'], net['roi_score_fb'], net['roi_num_fb'] = L.Feedback(
+    *from_layers, ntop=3)
 
 # Create the MultiBoxLossLayer.
 name = "mbox_loss"
