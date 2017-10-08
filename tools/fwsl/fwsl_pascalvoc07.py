@@ -899,8 +899,8 @@ net = caffe.NetSpec()
 # output_label=True,
 # label_map_file=label_map_file,
 # transform_param=test_transform_param)
-# net.data, net.rois_o, net.rois_normalized_o, net.roi_scores_o, net.roi_num_o, net.label = L.Python(
-net.data, net.rois, net.rois_normalized, net.roi_scores, net.roi_num, net.label = L.Python(
+# net.data, net.rois, net.rois_normalized, net.roi_scores, net.roi_num, net.label = L.Python(
+net.data, net.rois_o, net.rois_normalized_o, net.roi_scores_o, net.roi_num_o, net.label = L.Python(
     ntop=6,
     module='wsl_roi_anno_data_layer.layer',
     layer='RoIDataLayer',
@@ -914,60 +914,60 @@ VGGNetBody(
     dilated=True,
     dropout=False)
 
-# AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
+AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
-# mbox_layers = CreateMultiBoxHead(
-# net,
-# data_layer='data',
-# from_layers=mbox_source_layers,
-# use_batchnorm=use_batchnorm,
-# min_sizes=min_sizes,
-# max_sizes=max_sizes,
-# aspect_ratios=aspect_ratios,
-# steps=steps,
-# normalizations=normalizations,
-# num_classes=num_classes,
-# share_location=share_location,
-# flip=flip,
-# clip=clip,
-# prior_variance=prior_variance,
-# kernel_size=3,
-# pad=1,
-# lr_mult=lr_mult)
+mbox_layers = CreateMultiBoxHead(
+    net,
+    data_layer='data',
+    from_layers=mbox_source_layers,
+    use_batchnorm=use_batchnorm,
+    min_sizes=min_sizes,
+    max_sizes=max_sizes,
+    aspect_ratios=aspect_ratios,
+    steps=steps,
+    normalizations=normalizations,
+    num_classes=num_classes,
+    share_location=share_location,
+    flip=flip,
+    clip=clip,
+    prior_variance=prior_variance,
+    kernel_size=3,
+    pad=1,
+    lr_mult=lr_mult)
 
-# conf_name = "mbox_conf"
-# if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
-# reshape_name = "{}_reshape".format(conf_name)
-# net[reshape_name] = L.Reshape(
-# net[conf_name], shape=dict(dim=[0, -1, num_classes]))
-# softmax_name = "{}_softmax".format(conf_name)
-# net[softmax_name] = L.Softmax(net[reshape_name], axis=2)
-# flatten_name = "{}_flatten".format(conf_name)
-# net[flatten_name] = L.Flatten(net[softmax_name], axis=1)
-# mbox_layers[1] = net[flatten_name]
-# elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
-# sigmoid_name = "{}_sigmoid".format(conf_name)
-# net[sigmoid_name] = L.Sigmoid(net[conf_name])
-# mbox_layers[1] = net[sigmoid_name]
+conf_name = "mbox_conf"
+if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
+    reshape_name = "{}_reshape".format(conf_name)
+    net[reshape_name] = L.Reshape(
+        net[conf_name], shape=dict(dim=[0, -1, num_classes]))
+    softmax_name = "{}_softmax".format(conf_name)
+    net[softmax_name] = L.Softmax(net[reshape_name], axis=2)
+    flatten_name = "{}_flatten".format(conf_name)
+    net[flatten_name] = L.Flatten(net[softmax_name], axis=1)
+    mbox_layers[1] = net[flatten_name]
+elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
+    sigmoid_name = "{}_sigmoid".format(conf_name)
+    net[sigmoid_name] = L.Sigmoid(net[conf_name])
+    mbox_layers[1] = net[sigmoid_name]
 
-# net.detection_out = L.DetectionOutput(
-# *mbox_layers,
-# detection_output_param=det_out_param,
-# include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+net.detection_out = L.DetectionOutput(
+    *mbox_layers,
+    detection_output_param=det_out_param,
+    include=dict(phase=caffe_pb2.Phase.Value('TEST')))
 
-# from_layers = [net['detection_out'], net['data']]
-# net['rois_f'], net['rois_normalized_f'], net['roi_scores_f'], net[
-# 'roi_num_f'] = L.Feedback(
-# *from_layers, name='feedback', ntop=4, propagate_down=[False, False])
+from_layers = [net['detection_out'], net['data']]
+net['rois_f'], net['rois_normalized_f'], net['roi_scores_f'], net[
+    'roi_num_f'] = L.Feedback(
+        *from_layers, name='feedback', ntop=4, propagate_down=[False, False])
 
-# AddExtraLayers_concat(net)
+AddExtraLayers_concat(net)
 AddExtraLayers_cpg(net, lr_mult=0, is_test=True)
 
-# net.detection_eval = L.DetectionEvaluate(
-# net.detection_out,
-# net.label,
-# detection_evaluate_param=det_eval_param,
-# include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+net.detection_eval = L.DetectionEvaluate(
+    net.detection_out,
+    net.label,
+    detection_evaluate_param=det_eval_param,
+    include=dict(phase=caffe_pb2.Phase.Value('TEST')))
 
 with open(test_net_file, 'w') as f:
     print('name: "{}_test"'.format(model_name), file=f)
@@ -981,22 +981,22 @@ with open(deploy_net_file, 'w') as f:
     net_param = deploy_net.to_proto()
     # Remove the first (AnnotatedData) and last (DetectionEvaluate) layer from test net.
     del net_param.layer[0]
-    # del net_param.layer[-1]
+    del net_param.layer[-1]
     net_param.name = '{}_deploy'.format(model_name)
     net_param.input.extend(['data'])
     net_param.input_shape.extend(
         [caffe_pb2.BlobShape(dim=[1, 3, resize_height, resize_width])])
-    # net_param.input.extend(['rois_o'])
-    net_param.input.extend(['rois'])
+    net_param.input.extend(['rois_o'])
+    # net_param.input.extend(['rois'])
     net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1, 5])])
-    # net_param.input.extend(['rois_normalized_o'])
-    net_param.input.extend(['rois_normalized'])
+    net_param.input.extend(['rois_normalized_o'])
+    # net_param.input.extend(['rois_normalized'])
     net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1, 5])])
-    # net_param.input.extend(['roi_scores_o'])
-    net_param.input.extend(['roi_scores'])
+    net_param.input.extend(['roi_scores_o'])
+    # net_param.input.extend(['roi_scores'])
     net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1])])
-    # net_param.input.extend(['roi_num_o'])
-    net_param.input.extend(['roi_num'])
+    net_param.input.extend(['roi_num_o'])
+    # net_param.input.extend(['roi_num'])
     net_param.input_shape.extend([caffe_pb2.BlobShape(dim=[1])])
     print(net_param, file=f)
 shutil.copy(deploy_net_file, job_dir)

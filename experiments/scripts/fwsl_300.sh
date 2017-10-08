@@ -145,6 +145,8 @@ python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL
 	models/${PT_DIR}/${NET}/cpg/train_fc.prototxt \
 	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
 
+NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel
+
 
 echo ---------------------------------------------------------------------
 echo showing the solver file:
@@ -152,7 +154,7 @@ cat "output/${EXP_DIR}/FWSL/solver.prototxt"
 echo ---------------------------------------------------------------------
 time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
 	--solver output/${EXP_DIR}/FWSL/solver.prototxt \
-	--weights output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel \
+	--weights ${NET_FINAL}
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fwsl.yml \

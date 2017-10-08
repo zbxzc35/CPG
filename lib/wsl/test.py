@@ -196,8 +196,6 @@ def im_detect(net, im, boxes, box_scores):
             hashes, return_index=True, return_inverse=True)
         blobs['rois'] = blobs['rois'][index, :]
         blobs['roi_scores'] = blobs['roi_scores'][index]
-        # boxes = boxes[index, :]
-        # box_scores = box_scores[index]
 
         # print index.shape,inv_index.shape
 

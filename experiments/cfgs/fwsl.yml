@@ -14,6 +14,8 @@ TEST:
         NMS: 0.5
         PROPOSAL_METHOD: mcg
         USE_FLIPPED: False
+
+DEDUP_BOXES: 0.0
 RNG_SEED: 6
 EXP_DIR: fwsl
 USE_ROI_SCORE: True

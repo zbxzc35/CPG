@@ -97,36 +97,36 @@ if __name__ == '__main__':
     print('Using config:')
     pprint.pprint(cfg)
 
-    if not os.path.exists(args.caffemodel) and args.wait:
-        while not os.path.exists(args.caffemodel) and args.wait:
-            current_time = time.strftime("%Y-%m-%d %H:%M", time.localtime())
-            print('{}: waiting for {} to exist...'.format(
-                current_time, args.caffemodel))
-            time.sleep(60 * 10)
-        time.sleep(60 * 5)
+    # if not os.path.exists(args.caffemodel) and args.wait:
+        # while not os.path.exists(args.caffemodel) and args.wait:
+            # current_time = time.strftime("%Y-%m-%d %H:%M", time.localtime())
+            # print('{}: waiting for {} to exist...'.format(
+                # current_time, args.caffemodel))
+            # time.sleep(60 * 10)
+        # time.sleep(60 * 5)
 
-    # caffemodel_list = args.caffemodel.split(',')
-    # for caffemodel_this in caffemodel_list:
-        # caffemodel_this = caffemodel_this.strip()
-        # if not os.path.exists(caffemodel_this) and args.wait:
-            # while not os.path.exists(caffemodel_this) and args.wait:
-                # current_time = time.strftime("%Y-%m-%d %H:%M",
-                                             # time.localtime())
-                # print('{}: waiting for {} to exist...'.format(
-                    # current_time, caffemodel_this))
-                # time.sleep(60 * 10)
-            # time.sleep(60 * 5)
+    caffemodel_list = args.caffemodel.split(',')
+    for caffemodel_this in caffemodel_list:
+        caffemodel_this = caffemodel_this.strip()
+        if not os.path.exists(caffemodel_this) and args.wait:
+            while not os.path.exists(caffemodel_this) and args.wait:
+                current_time = time.strftime("%Y-%m-%d %H:%M",
+                                             time.localtime())
+                print('{}: waiting for {} to exist...'.format(
+                    current_time, caffemodel_this))
+                time.sleep(60 * 10)
+            time.sleep(60 * 5)
 
     # set up caffe
     caffe.set_mode_gpu()
     caffe.set_device(args.gpu_id)
 
-    net = caffe.Net(args.prototxt, args.caffemodel, caffe.TEST)
-    # net = caffe.Net(args.prototxt, caffe.TEST)
-    # for caffemodel_this in caffemodel_list:
-        # caffemodel_this = caffemodel_this.strip()
-        # print 'Loading model from: ',caffemodel_this
-        # net.copy_from(caffemodel_this)
+    # net = caffe.Net(args.prototxt, args.caffemodel, caffe.TEST)
+    net = caffe.Net(args.prototxt, caffe.TEST)
+    for caffemodel_this in caffemodel_list:
+        caffemodel_this = caffemodel_this.strip()
+        print 'Loading model from: ',caffemodel_this
+        net.copy_from(caffemodel_this)
 
     net.name = os.path.splitext(os.path.basename(args.caffemodel))[0]
 

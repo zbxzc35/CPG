@@ -76,67 +76,6 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-##=========================================================================
-##第一步
-#echo ---------------------------------------------------------------------
-#echo showing the solver file:
-#cat "models/${PT_DIR}/${NET}/cpg/solver.prototxt"
-#echo ---------------------------------------------------------------------
-#time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-	#--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
-	#--weights data/imagenet_models/${NET}.v2.caffemodel \
-	#--imdb ${TRAIN_IMDB} \
-	#--iters ${ITERS} \
-	#--cfg experiments/cfgs/cpg.yml \
-	#${EXTRA_ARGS} \
-	#EXP_DIR ${EXP_DIR}/CPG \
-	#TRAIN.SCALES [300] \
-	#TEST.SCALES [300]
-
-#set +x
-#NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
-#set -x
-
-#time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-	#--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-	#--net ${NET_FINAL} \
-	#--imdb ${TEST_IMDB} \
-	#--cfg experiments/cfgs/cpg.yml \
-	#${EXTRA_ARGS} \
-	#EXP_DIR ${EXP_DIR}/CPG \
-	#TRAIN.SCALES [300] \
-	#TEST.SCALES [300]
-
-#time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-	#--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-	#--net ${NET_FINAL} \
-	#--imdb ${TRAIN_IMDB} \
-	#--cfg experiments/cfgs/cpg.yml \
-	#${EXTRA_ARGS} \
-	#EXP_DIR ${EXP_DIR}/CPG \
-	#TRAIN.SCALES [300] \
-	#TEST.SCALES [300]
-
-##=========================================================================
-##第二步
-#python ./tools/fwsl/ssd_pascalvoc07.py ${EXP_DIR}/SSD
-
-#echo ---------------------------------------------------------------------
-#echo showing the solver file:
-#cat "output/${EXP_DIR}/SSD/solver.prototxt"
-#echo ---------------------------------------------------------------------
-#time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
-	#--solver output/${EXP_DIR}/SSD/solver.prototxt \
-	#--weights data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel \
-	#--imdb ${TRAIN_IMDB} \
-	#--iters ${ITERS} \
-	#--cfg experiments/cfgs/ssd.yml \
-	#${EXTRA_ARGS} \
-	#TRAIN.PROPOSAL_METHOD pseudo_gt \
-	#TRAIN.PSEUDO_PATH output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
-
-#=========================================================================
-#第三步
 python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL_score
 
 ./tools/fwsl/fc6fc7_to_wsl.py \
@@ -148,7 +87,7 @@ python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL_score
 
 NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel
 #NET_FINAL=output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel,output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
-NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
+#NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
 
 #--def models/pascal_voc/VGG16/cpg/test_fc.prototxt
 #--def output/${EXP_DIR}/FWSL_score/deploy.prototxt

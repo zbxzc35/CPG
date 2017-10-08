@@ -132,6 +132,21 @@ def _project_im_rois(im_rois, scales):
     return rois, levels
 
 
+def _unproject_im_rois(im_rois, scales):
+    im_rois = im_rois.astype(np.float32, copy=False)
+
+    if len(scales) > 1:
+        print 'current only support one scale each forward'
+        exit()
+
+    else:
+        levels = np.zeros((im_rois.shape[0], 1), dtype=np.int)
+
+    rois = im_rois / scales[levels]
+
+    return rois
+
+
 def _get_roi_scores_blob(roi_scores, scale, roi_num):
     roi_scores_blob = np.zeros([0, 1], dtype=np.float)
     for s in scale:
@@ -203,8 +218,8 @@ def im_detect(net, im, boxes, box_scores):
     # (some distinct image ROIs get mapped to the same feature ROI).
     # Here, we identify duplicate feature ROIs, so we only compute features
     # on the unique subset.
-    if cfg.DEDUP_BOXES > 0 and False:
-        v = np.array([1, 1e5, 1e10, 1e15, 1e20])
+    if cfg.DEDUP_BOXES > 0:
+        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
         hashes = np.round(blobs['rois'] * cfg.DEDUP_BOXES).dot(v)
         _, index, inv_index = np.unique(
             hashes, return_index=True, return_inverse=True)
@@ -221,27 +236,28 @@ def im_detect(net, im, boxes, box_scores):
 
     # reshape network inputs
     net.blobs['data'].reshape(*(blobs['data'].shape))
-    net.blobs['rois'].reshape(*(blobs['rois'].shape))
-    net.blobs['rois_normalized'].reshape(*(blobs['rois_normalized'].shape))
-    net.blobs['roi_scores'].reshape(*(blobs['roi_scores'].shape))
+    net.blobs['rois_o'].reshape(*(blobs['rois'].shape))
+    net.blobs['rois_normalized_o'].reshape(*(blobs['rois_normalized'].shape))
+    net.blobs['roi_scores_o'].reshape(*(blobs['roi_scores'].shape))
     if cfg.CONTEXT:
-        net.blobs['rois_context'].reshape(*(blobs['rois_context'].shape))
-        net.blobs['rois_frame'].reshape(*(blobs['rois_frame'].shape))
-    net.blobs['roi_num'].reshape(*(blobs['roi_num'].shape))
+        net.blobs['rois_context_o'].reshape(*(blobs['rois_context'].shape))
+        net.blobs['rois_frame_o'].reshape(*(blobs['rois_frame'].shape))
+    net.blobs['roi_num_o'].reshape(*(blobs['roi_num'].shape))
 
     # do forward
     forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
-    forward_kwargs['rois'] = blobs['rois'].astype(np.float32, copy=False)
-    forward_kwargs['rois_normalized'] = blobs['rois_normalized'].astype(
+    forward_kwargs['rois_o'] = blobs['rois'].astype(np.float32, copy=False)
+    forward_kwargs['rois_normalized_o'] = blobs['rois_normalized'].astype(
         np.float32, copy=False)
-    forward_kwargs['roi_scores'] = blobs['roi_scores'].astype(
+    forward_kwargs['roi_scores_o'] = blobs['roi_scores'].astype(
         np.float32, copy=False)
     if cfg.CONTEXT:
-        forward_kwargs['rois_context'] = blobs['rois_context'].astype(
+        forward_kwargs['rois_context_o'] = blobs['rois_context'].astype(
             np.float32, copy=False)
-        forward_kwargs['rois_frame'] = blobs['rois_frame'].astype(
+        forward_kwargs['rois_frame_o'] = blobs['rois_frame'].astype(
             np.float32, copy=False)
-    forward_kwargs['roi_num'] = blobs['roi_num'].astype(np.float32, copy=False)
+    forward_kwargs['roi_num_o'] = blobs['roi_num'].astype(
+        np.float32, copy=False)
 
     blobs_out = net.forward(**forward_kwargs)
 
@@ -254,24 +270,23 @@ def im_detect(net, im, boxes, box_scores):
         scores = blobs_out['bbox_prob']
         scores = scores.squeeze()
 
-        # boxes = net.blobs['rois'].data
-        # boxes = boxes[:, 1:]
-        # print boxes
-        # print boxes.shape, scores.shape
+        num_roi_old = boxes.shape[0]
+        boxes_old = boxes
+
+        boxes = net.blobs['rois'].data
+        # boxes = net.blobs['rois_o'].data
+        boxes = boxes[:, 1:]
+        boxes[num_roi_old:, :] = _unproject_im_rois(boxes[num_roi_old:, :],
+                                                    im_scales)
+        boxes[:num_roi_old, :] = boxes_old
 
     # Simply repeat the boxes, once for each class
     pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
-    if cfg.DEDUP_BOXES > 0 and False:
+    if cfg.DEDUP_BOXES > 0:
         # Map scores and predictions back to the original set of boxes
-        # for s in range(scores.shape[0]):
-            # print s, scores[s]
-        # print scores.shape
         scores = scores[inv_index, :]
         # pred_boxes = pred_boxes[inv_index, :]
-    # for s in range(scores.shape[0]):
-        # print s, scores[s]
-    # print scores.shape
 
     return scores, pred_boxes
 
