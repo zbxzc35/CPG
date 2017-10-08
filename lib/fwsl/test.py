@@ -71,6 +71,19 @@ def _get_rois_blob(im_rois, im_scale_factors):
     return rois_blob.astype(np.float32, copy=False), levels
 
 
+def _get_normalize_roi_blob(img_roi, img_shape, levels):
+    img_roi = img_roi.astype(np.float32, copy=False)
+
+    rois_normalized = np.zeros_like(img_roi)
+    rois_normalized[:, 0] = img_roi[:, 0] / img_shape[1]
+    rois_normalized[:, 1] = img_roi[:, 1] / img_shape[0]
+    rois_normalized[:, 2] = img_roi[:, 2] / img_shape[1]
+    rois_normalized[:, 3] = img_roi[:, 3] / img_shape[0]
+
+    roi_normalized_blob = np.hstack((levels, rois_normalized))
+    return roi_normalized_blob.astype(np.float32, copy=False)
+
+
 def _get_context_rois_blob(im_rois, im_scale_factors):
     im_inner_rois, im_outer_rois = get_inner_outer_roi(im_rois,
                                                        cfg.CONTEXT_RATIO)
@@ -162,6 +175,7 @@ def _get_blobs(im, rois, roi_scores):
     blobs = {'data': None, 'rois': None, 'roi_scores': None}
     blobs['data'], im_scale_factors = _get_image_blob(im)
     blobs['rois'], levels = _get_rois_blob(rois, im_scale_factors)
+    blobs['rois_normalized'] = _get_normalize_roi_blob(rois, im.shape, levels)
     blobs['roi_scores'] = _get_roi_scores_blob(roi_scores, im_scale_factors,
                                                len(rois))
     if cfg.CONTEXT:
@@ -189,16 +203,15 @@ def im_detect(net, im, boxes, box_scores):
     # (some distinct image ROIs get mapped to the same feature ROI).
     # Here, we identify duplicate feature ROIs, so we only compute features
     # on the unique subset.
-    if cfg.DEDUP_BOXES > 0:
-        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
+    if cfg.DEDUP_BOXES > 0 and False:
+        v = np.array([1, 1e5, 1e10, 1e15, 1e20])
         hashes = np.round(blobs['rois'] * cfg.DEDUP_BOXES).dot(v)
         _, index, inv_index = np.unique(
             hashes, return_index=True, return_inverse=True)
+        # print [blobs[key].shape for key in blobs]
         blobs['rois'] = blobs['rois'][index, :]
         blobs['roi_scores'] = blobs['roi_scores'][index]
-        # boxes = boxes[index, :]
-        # box_scores = box_scores[index]
-
+        # print [blobs[key].shape for key in blobs]
         # print index.shape,inv_index.shape
 
         if cfg.CONTEXT:
@@ -209,6 +222,7 @@ def im_detect(net, im, boxes, box_scores):
     # reshape network inputs
     net.blobs['data'].reshape(*(blobs['data'].shape))
     net.blobs['rois'].reshape(*(blobs['rois'].shape))
+    net.blobs['rois_normalized'].reshape(*(blobs['rois_normalized'].shape))
     net.blobs['roi_scores'].reshape(*(blobs['roi_scores'].shape))
     if cfg.CONTEXT:
         net.blobs['rois_context'].reshape(*(blobs['rois_context'].shape))
@@ -218,6 +232,8 @@ def im_detect(net, im, boxes, box_scores):
     # do forward
     forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
     forward_kwargs['rois'] = blobs['rois'].astype(np.float32, copy=False)
+    forward_kwargs['rois_normalized'] = blobs['rois_normalized'].astype(
+        np.float32, copy=False)
     forward_kwargs['roi_scores'] = blobs['roi_scores'].astype(
         np.float32, copy=False)
     if cfg.CONTEXT:
@@ -238,106 +254,24 @@ def im_detect(net, im, boxes, box_scores):
         scores = blobs_out['bbox_prob']
         scores = scores.squeeze()
 
+        # boxes = net.blobs['rois'].data
+        # boxes = boxes[:, 1:]
+        # print boxes
+        # print boxes.shape, scores.shape
+
     # Simply repeat the boxes, once for each class
     pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
-    if cfg.DEDUP_BOXES > 0:
+    if cfg.DEDUP_BOXES > 0 and False:
         # Map scores and predictions back to the original set of boxes
+        # for s in range(scores.shape[0]):
+            # print s, scores[s]
+        # print scores.shape
         scores = scores[inv_index, :]
         # pred_boxes = pred_boxes[inv_index, :]
-
-    return scores, pred_boxes
-
-
-def im_detect_bbox(net, im, boxes, box_scores):
-    """Detect object classes in an image given object proposals.
-
-    Arguments:
-        net (caffe.Net): Fast R-CNN network to use
-        im (ndarray): color image to test (in BGR order)
-        boxes (ndarray): R x 4 array of object proposals or None (for RPN)
-
-    Returns:
-        scores (ndarray): R x K array of object class scores (K includes
-            background as object category 0)
-        boxes (ndarray): R x (4*K) array of predicted bounding boxes
-    """
-    blobs, im_scales = _get_blobs(im, boxes, box_scores)
-
-    # When mapping from image ROIs to feature map ROIs, there's some aliasing
-    # (some distinct image ROIs get mapped to the same feature ROI).
-    # Here, we identify duplicate feature ROIs, so we only compute features
-    # on the unique subset.
-    if cfg.DEDUP_BOXES > 0:
-        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
-        hashes = np.round(blobs['rois'] * cfg.DEDUP_BOXES).dot(v)
-        _, index, inv_index = np.unique(
-            hashes, return_index=True, return_inverse=True)
-        blobs['rois'] = blobs['rois'][index, :]
-        blobs['roi_scores'] = blobs['roi_scores'][index]
-        # boxes = boxes[index, :]
-        # box_scores = box_scores[index]
-
-        if cfg.CONTEXT:
-            blobs['rois_context'] = blobs['rois_context'][index, :]
-            blobs['rois_frame'] = blobs['rois_frame'][index, :]
-
-    # reshape network inputs
-    net.blobs['data'].reshape(*(blobs['data'].shape))
-    net.blobs['rois'].reshape(*(blobs['rois'].shape))
-    net.blobs['roi_scores'].reshape(*(blobs['roi_scores'].shape))
-    if cfg.CONTEXT:
-        net.blobs['rois_context'].reshape(*(blobs['rois_context'].shape))
-        net.blobs['rois_frame'].reshape(*(blobs['rois_frame'].shape))
-
-    # do forward
-    forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
-    forward_kwargs['rois'] = blobs['rois'].astype(np.float32, copy=False)
-    forward_kwargs['roi_scores'] = blobs['roi_scores'].astype(
-        np.float32, copy=False)
-    if cfg.CONTEXT:
-        forward_kwargs['rois_context'] = blobs['rois_context'].astype(
-            np.float32, copy=False)
-        forward_kwargs['rois_frame'] = blobs['rois_frame'].astype(
-            np.float32, copy=False)
-
-    blobs_out = net.forward(**forward_kwargs)
-
-    if cfg.TEST.SVM:
-        # use the raw scores before softmax under the assumption they
-        # were trained as linear SVMs
-        scores = net.blobs['cls_score'].data
-    else:
-        # use softmax estimated probabilities
-        # scores = blobs_out['cls_prob']
-        # scores = blobs_out['bbox_prob']
-        # scores = scores.squeeze()
-        cls_scores = blobs_out['cls_score']
-        bboxes = blobs_out['bboxes']
-        cls_scores = cls_scores.squeeze()
-        bboxes = bboxes.squeeze()
-
-    # Simply repeat the boxes, once for each class
-    # pred_boxes = np.tile(boxes, (1, scores.shape[1]))
-    scores = np.tile(cls_scores, [bboxes.shape[1], 1])
-    pred_boxes = bboxes
-
-    pred_boxes = np.rollaxis(pred_boxes, 1)
-    pred_boxes = np.reshape(pred_boxes,
-                            (pred_boxes.shape[0],
-                             pred_boxes.shape[1] * pred_boxes.shape[2]))
-
-    for box_id in range(bboxes.shape[1]):
-        for cls_label, cls_score in enumerate(cls_scores):
-            if pred_boxes[box_id][cls_label * 4] == -1:
-                scores[box_id][cls_label] = -1
-
-    pred_boxes /= im_scales
-
-    # if cfg.DEDUP_BOXES > 0:
-    # Map scores and predictions back to the original set of boxes
-    # scores = scores[inv_index, :]
-    # pred_boxes = pred_boxes[inv_index, :]
+    # for s in range(scores.shape[0]):
+        # print s, scores[s]
+    # print scores.shape
 
     return scores, pred_boxes
 
@@ -629,354 +563,6 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
     det_file_o = os.path.join(output_dir, 'detections_o.pkl')
     with open(det_file_o, 'wb') as f:
         cPickle.dump(all_boxes_o, f, cPickle.HIGHEST_PROTOCOL)
-
-    print 'Evaluating detections'
-    imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
-
-
-def test_net_ensemble(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
-    print 'max_per_image: ', max_per_image
-    print 'thresh: ', thresh
-
-    num_images = len(imdb.image_index)
-    # all detections are collected into:
-    #    all_boxes[cls][image] = N x 5 array of detections in
-    #    (x1, y1, x2, y2, score)
-    all_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(imdb.num_classes)]
-    all_scores = [[[] for _ in xrange(num_images)]
-                  for _ in xrange(imdb.num_classes)]
-
-    output_dir = get_output_dir(imdb, None)
-
-    # load all the detection results
-    all_boxes_cache = None
-    for det_dir in det_dirs:
-        det_path = os.path.join(det_dir, 'detections_o.pkl')
-        print 'load det: ', det_path
-        assert os.path.isfile(det_path), 'no det file: ' + det_path
-        with open(det_path, 'rb') as f:
-            all_boxes_cache_this = cPickle.load(f)
-        print 'all_boxes_cache_this: ', len(all_boxes_cache_this), len(
-            all_boxes_cache_this[0])
-        print 'all_boxes_cache_this[0][0]: ', all_boxes_cache_this[0][0].shape
-        # print 'all_boxes_cache_this[0][0][0]: ', all_boxes_cache_this[0][0][0]
-        # print 'all_boxes_cache_this[14][0]: ', all_boxes_cache_this[14][0].shape
-        # print 'all_boxes_cache_this[14][0][0]: ',
-        # all_boxes_cache_this[14][0][0]
-
-        if all_boxes_cache is None:
-            all_boxes_cache = all_boxes_cache_this
-        else:
-            print 'Sum up all result'
-            print 'If error happen here, it counld be that the dimensions miss match.'
-            for c in xrange(imdb.num_classes):
-                for n in xrange(num_images):
-                    all_boxes_cache[c][n][:, 4] += all_boxes_cache_this[c][
-                        n][:, 4]
-
-    print 'all_boxes_cache: ', len(all_boxes_cache), len(all_boxes_cache[0])
-    print 'all_boxes_cache[0][0]: ', all_boxes_cache[0][0].shape
-    # print 'all_boxes_cache[0][0][0]: ', all_boxes_cache[0][0][0]
-    # print 'all_boxes_cache[14][0]: ', all_boxes_cache[14][0].shape
-    # print 'all_boxes_cache[14][0][0]: ', all_boxes_cache[14][0][0]
-
-    # timers
-    _t = {'im_detect': Timer(), 'misc': Timer()}
-
-    roidb = imdb.roidb
-
-    for i in xrange(num_images):
-        _t['im_detect'].tic()
-        _t['im_detect'].toc()
-
-        _t['misc'].tic()
-        # skip j = 0, because it's the background class
-        # fuck skip
-        for j in xrange(0, imdb.num_classes):
-            # all_scores[j][i] = sum(scores[:, j])
-            all_scores[j][i] = sum(all_boxes_cache[j][i][:, -1])
-
-            # inds = np.where(scores[:, j] > thresh)[0]
-            # cls_scores = scores[inds, j]
-            inds = np.where(all_boxes_cache[j][i][:, -1] > thresh)[0]
-            cls_scores = all_boxes_cache[j][i][inds, -1]
-
-            # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
-            cls_boxes = all_boxes_cache[j][i][inds, 0:4]
-            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
-                .astype(np.float32, copy=False)
-
-            keep = nms(cls_dets, cfg.TEST.NMS)
-            cls_dets = cls_dets[keep, :]
-
-            all_boxes[j][i] = cls_dets
-
-        # Limit to max_per_image detections *over all classes*
-        if max_per_image > 0:
-            image_scores = np.hstack(
-                [all_boxes[j][i][:, -1] for j in xrange(0, imdb.num_classes)])
-            if len(image_scores) > max_per_image:
-                image_thresh = np.sort(image_scores)[-max_per_image]
-                for j in xrange(0, imdb.num_classes):
-                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
-                    all_boxes[j][i] = all_boxes[j][i][keep, :]
-        _t['misc'].toc()
-
-        print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
-            .format(i + 1, num_images, _t['im_detect'].average_time,
-                    _t['misc'].average_time)
-
-    det_file = os.path.join(output_dir, 'detections.pkl')
-    with open(det_file, 'wb') as f:
-        cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
-
-    print 'Evaluating detections'
-    imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
-
-
-def test_net_cache(net, imdb, max_per_image=1000, thresh=0.00000001,
-                   vis=False):
-    """Test a network on an image database."""
-    print 'max_per_image: ', max_per_image
-    print 'thresh: ', thresh
-
-    num_images = len(imdb.image_index)
-    # all detections are collected into:
-    #    all_boxes[cls][image] = N x 5 array of detections in
-    #    (x1, y1, x2, y2, score)
-    all_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(imdb.num_classes)]
-    all_scores = [[[] for _ in xrange(num_images)]
-                  for _ in xrange(imdb.num_classes)]
-
-    output_dir = get_output_dir(imdb, net)
-    if cfg.OPG_DEBUG:
-        vis_dir = get_vis_dir(imdb, net)
-
-    det_file = os.path.join(output_dir, 'detections.pkl')
-    if not os.path.isfile(det_file):
-        print 'file not exists: ', det_file
-        # we make sure all region all left
-        origin_NMS = cfg.TEST.NMS
-        cfg.TEST.NMS = 1.1
-        test_net(net, imdb, max_per_image=99999, thresh=0.0000, vis=False)
-        cfg.TEST.NMS = origin_NMS
-
-    with open(det_file, 'rb') as f:
-        all_boxes_cache = cPickle.load(f)
-    print 'all_boxes_cache: ', len(all_boxes_cache), len(all_boxes_cache[0])
-    print 'all_boxes_cache: ', all_boxes_cache[0][0].shape
-    print 'all_boxes_cache: ', all_boxes_cache[14][0].shape
-
-    # timers
-    _t = {'im_detect': Timer(), 'misc': Timer()}
-
-    roidb = imdb.roidb
-
-    test_scales = cfg.TEST.SCALES
-    save_id = 0
-    for i in xrange(num_images):
-        _t['im_detect'].tic()
-        _t['im_detect'].toc()
-
-        _t['misc'].tic()
-        # skip j = 0, because it's the background class
-        # fuck skip
-        for j in xrange(0, imdb.num_classes):
-            # all_scores[j][i] = sum(scores[:, j])
-            all_scores[j][i] = sum(all_boxes_cache[j][i][:, -1])
-
-            # inds = np.where(scores[:, j] > thresh)[0]
-            # cls_scores = scores[inds, j]
-            inds = np.where(all_boxes_cache[j][i][:, -1] > thresh)[0]
-            cls_scores = all_boxes_cache[j][i][inds, -1]
-
-            # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
-            cls_boxes = all_boxes_cache[j][i][inds, 0:4]
-            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
-                .astype(np.float32, copy=False)
-
-            if vis:
-                vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
-
-            keep = nms(cls_dets, cfg.TEST.NMS)
-            cls_dets = cls_dets[keep, :]
-
-            # if vis:
-            # vis_detections(im, imdb.classes[j], cls_dets, thresh=thresh)
-            all_boxes[j][i] = cls_dets
-
-        if vis:
-            import matplotlib.pyplot as plt
-            # plt.show()
-            plt.close('all')
-        # Limit to max_per_image detections *over all classes*
-        if max_per_image > 0:
-            image_scores = np.hstack(
-                [all_boxes[j][i][:, -1] for j in xrange(0, imdb.num_classes)])
-            if len(image_scores) > max_per_image:
-                image_thresh = np.sort(image_scores)[-max_per_image]
-                for j in xrange(0, imdb.num_classes):
-                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
-                    all_boxes[j][i] = all_boxes[j][i][keep, :]
-        _t['misc'].toc()
-
-        print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
-            .format(i + 1, num_images, _t['im_detect'].average_time,
-                    _t['misc'].average_time)
-
-    print 'Evaluating detections'
-    imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
-
-
-def test_net_bbox(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
-    """Test a network on an image database."""
-    num_images = len(imdb.image_index)
-    # all detections are collected into:
-    #    all_boxes[cls][image] = N x 5 array of detections in
-    #    (x1, y1, x2, y2, score)
-    all_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(imdb.num_classes)]
-    all_scores = [[[] for _ in xrange(num_images)]
-                  for _ in xrange(imdb.num_classes)]
-
-    output_dir = get_output_dir(imdb, net)
-    if cfg.OPG_DEBUG:
-        vis_dir = get_vis_dir(imdb, net)
-
-    # timers
-    _t = {'im_detect_bbox': Timer(), 'misc': Timer()}
-
-    roidb = imdb.roidb
-
-    test_scales = cfg.TEST.SCALES
-    save_id = 0
-    for i in xrange(num_images):
-        # if imdb.image_index[i] != '001547':
-        # continue
-        # if i>100:
-        # continue
-
-        # filter out any ground truth boxes
-        # The roidb may contain ground-truth rois (for example, if the roidb
-        # comes from the training or val split). We only want to evaluate
-        # detection on the *non*-ground-truth rois. We select those the rois
-        # that have the gt_classes field set to 0, which means there's no
-        # ground truth.
-        # box_proposals = roidb[i]['boxes'][roidb[i]['gt_classes'] == 0]
-        box_proposals = roidb[i]['boxes']
-        rois_per_this_image = min(cfg.TEST.ROIS_PER_IM, len(box_proposals))
-        box_proposals = box_proposals[0:rois_per_this_image, :]
-        if cfg.USE_ROI_SCORE:
-            box_scores = roidb[i]['box_scores']
-        else:
-            box_scores = None
-
-        im = cv2.imread(imdb.image_path_at(i))
-
-        _t['im_detect_bbox'].tic()
-
-        scores = None
-        boxes = None
-        for target_size in test_scales:
-            if cfg.OPG_DEBUG:
-                # save_subdir = time.strftime("%Y-%m-%d", time.gmtime())
-                # save_dir = os.path.join('tmp', save_subdir)
-                # if not os.path.exists(save_dir):
-                # os.makedirs(save_dir)
-                cv2.imwrite(os.path.join(vis_dir, str(save_id) + '_.png'), im)
-                save_id += 1
-
-            cfg.TEST.SCALES = (target_size, )
-            scores_scale, boxes_scale = im_detect_bbox(net, im, box_proposals,
-                                                       box_scores)
-            if scores is None:
-                scores = scores_scale
-                boxes = boxes_scale
-            else:
-                scores = np.vstack((scores, scores_scale))
-                boxes = np.vstack((boxes, boxes_scale))
-
-        if cfg.TEST.USE_FLIPPED:
-            im_flip = im[:, ::-1, :]
-            box_proposals_flip = box_proposals.copy()
-            oldx1 = box_proposals_flip[:, 0].copy()
-            oldx2 = box_proposals_flip[:, 2].copy()
-            box_proposals_flip[:, 0] = im.shape[1] - oldx2 - 1
-            box_proposals_flip[:, 2] = im.shape[1] - oldx1 - 1
-
-            for target_size in test_scales:
-                if cfg.OPG_DEBUG:
-                    # save_subdir = time.strftime("%Y-%m-%d", time.gmtime())
-                    # save_dir = os.path.join('tmp', save_subdir)
-                    cv2.imwrite(
-                        os.path.join(vis_dir, str(save_id) + '_.png'), im_flip)
-                    save_id += 1
-
-                cfg.TEST.SCALES = (target_size, )
-                scores_scale, boxes_scale = im_detect_bbox(
-                    net, im_flip, box_proposals_flip, box_scores)
-
-                # scores = np.vstack((scores, scores_scale))
-                # boxes = np.vstack((boxes, boxes_scale))
-
-        _t['im_detect_bbox'].toc()
-
-        _t['misc'].tic()
-        # skip j = 0, because it's the background class
-        # fuck skip
-        for j in xrange(0, imdb.num_classes):
-            all_scores[j][i] = sum(scores[:, j])
-
-            inds = np.where(scores[:, j] > thresh)[0]
-            cls_scores = scores[inds, j]
-
-            # if len(cls_scores) > 0:
-            # sum_score = sum(cls_scores)
-            # max_score = max(cls_scores)
-            # print cls_scores
-            # cls_scores *= (sum_score / max_score)
-            # print sum_score, max_score, sum_score / max_score
-            # print cls_scores
-
-            cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
-            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
-                .astype(np.float32, copy=False)
-
-            if vis:
-                vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
-
-            keep = nms(cls_dets, cfg.TEST.NMS)
-            cls_dets = cls_dets[keep, :]
-
-            # if vis:
-            # vis_detections(im, imdb.classes[j], cls_dets, thresh=thresh)
-            all_boxes[j][i] = cls_dets
-
-        if vis:
-            import matplotlib.pyplot as plt
-            # plt.show()
-            plt.close('all')
-
-        # Limit to max_per_image detections *over all classes*
-        if max_per_image > 0:
-            image_scores = np.hstack(
-                [all_boxes[j][i][:, -1] for j in xrange(0, imdb.num_classes)])
-            if len(image_scores) > max_per_image:
-                image_thresh = np.sort(image_scores)[-max_per_image]
-                for j in xrange(0, imdb.num_classes):
-                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
-                    all_boxes[j][i] = all_boxes[j][i][keep, :]
-        _t['misc'].toc()
-
-        print 'im_detect_bbox: {:d}/{:d} {:.3f}s {:.3f}s' \
-            .format(i + 1, num_images, _t['im_detect_bbox'].average_time,
-                    _t['misc'].average_time)
-
-    det_file = os.path.join(output_dir, 'detections.pkl')
-    with open(det_file, 'wb') as f:
-        cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
 
     print 'Evaluating detections'
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)

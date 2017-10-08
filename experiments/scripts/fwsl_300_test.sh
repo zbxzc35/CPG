@@ -137,19 +137,23 @@ echo ---------------------------------------------------------------------
 
 #=========================================================================
 #第三步
-python ./tools/fwsl/fwsl_pascalvoc07_test.py ${EXP_DIR}/FWSL
+python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL_score
 
 ./tools/fwsl/fc6fc7_to_wsl.py \
 	models/${PT_DIR}/${NET}/cpg/test.prototxt \
 	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30.caffemodel \
-	models/${PT_DIR}/${NET}/cpg/predict_module.prototxt \
-	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel
+	models/${PT_DIR}/${NET}/cpg/train_fc.prototxt \
+	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
 
 
-NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel \
+NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel
+#NET_FINAL=output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel,output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
+NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
 
+#--def models/pascal_voc/VGG16/cpg/test_fc.prototxt
+#--def output/${EXP_DIR}/FWSL_score/deploy.prototxt
 time ./tools/fwsl/test_net.py --gpu ${GPU_ID} \
-	--def output/${EXP_DIR}/FWSL/test.prototxt \
+	--def output/${EXP_DIR}/FWSL_score/deploy.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
 	--cfg experiments/cfgs/fwsl.yml \

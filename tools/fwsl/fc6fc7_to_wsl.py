@@ -42,7 +42,7 @@ out_caffemodel = sys.argv[4]
 
 # Load the original network and extract the fully connected layers' parameters.
 net = caffe.Net(in_prototext, in_caffemodel, caffe.TEST)
-params = ['fc6', 'fc7']
+params = ['fc6', 'fc7', 'fc8c', 'fc8d']
 # fc_params = {name: (weights, biases)}
 fc_params = {
     pr: (net.params[pr][0].data, net.params[pr][1].data)
@@ -55,7 +55,7 @@ for fc in params:
 
 # Load the fully convolutional network to transplant the parameters.
 net_full_conv = caffe.Net(out_prototext, in_caffemodel, caffe.TEST)
-params_full_conv = ['fc6_wsl', 'fc7_wsl']
+params_full_conv = ['fc6_wsl', 'fc7_wsl', 'fc8c_wsl', 'fc8d_wsl']
 # conv_params = {name: (weights, biases)}
 conv_params = {
     pr: (net_full_conv.params[pr][0].data, net_full_conv.params[pr][1].data)

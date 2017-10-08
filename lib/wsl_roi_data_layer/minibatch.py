@@ -108,7 +108,7 @@ def get_minibatch(roidb, num_classes):
             roi, width=img.shape[1], height=img.shape[0])
 
         # 归一化
-        # roi = _normalize_img_roi(roi, img.shape)
+        # roi_n = _normalize_img_roi(roi, img.shape)
 
         if cfg.CONTEXT:
             roi_inner, roi_outer = get_inner_outer_roi(roi, cfg.CONTEXT_RATIO)

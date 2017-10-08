@@ -319,10 +319,10 @@ def ApplyDistort(in_img):
 
 
 def convertTo(in_img, alpha, beta):
-    # out_img = in_img.astype(np.float32)
-    out_img = in_img * alpha + beta
+    out_img = in_img.astype(np.float32)
+    out_img = out_img * alpha + beta
     out_img = np.clip(out_img, 0, 255)
-    # out_img = out_img.astype(in_img.dtype)
+    out_img = out_img.astype(in_img.dtype)
     return out_img
 
 

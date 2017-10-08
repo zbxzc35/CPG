@@ -142,8 +142,8 @@ python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL
 ./tools/fwsl/fc6fc7_to_wsl.py \
 	models/${PT_DIR}/${NET}/cpg/test.prototxt \
 	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30.caffemodel \
-	models/${PT_DIR}/${NET}/cpg/predict_module.prototxt \
-	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_predict.caffemodel
+	models/${PT_DIR}/${NET}/cpg/train_fc.prototxt \
+	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
 
 
 echo ---------------------------------------------------------------------

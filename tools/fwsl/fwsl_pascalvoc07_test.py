@@ -144,7 +144,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
     return net
 
 
-def AddExtraLayers_cpg(net, lr_mult=1):
+def AddExtraLayers_cpg(net, lr_mult=1, is_test=False):
     use_relu = True
 
     kwargs = {
@@ -277,6 +277,20 @@ def AddExtraLayers_cpg(net, lr_mult=1):
         *from_layers,
         pool=caffe_pb2.RoIScorePoolingParameter.PoolMethod.Value('SUM'),
         axis=0)
+
+    if is_test:
+        from_layers = [
+            net['cls_score'], net['cls_score'], net['roi'], net['bbox_score']
+        ]
+        net['cpg_roi_select'] = L.MIL(
+            *from_layers, cpg_param=cpg_train_param, ntop=1)
+
+        from_layers = [net['bbox_score'], net['cpg_roi_select']]
+        out_layer = 'bbox_prob'
+        net[out_layer] = L.Eltwise(
+            *from_layers,
+            operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
+        return net
 
     from_layers = [
         net['label'], net['cls_score'], net['roi'], net['bbox_score']
@@ -572,7 +586,7 @@ for file in os.listdir(snapshot_dir):
 
 if max_iter == 0:
     print("Cannot find snapshot in {}".format(snapshot_dir))
-    sys.exit()
+    # sys.exit()
 
 # Stores the test image names and sizes. Created by data/VOC2007/create_list.sh
 name_size_file = "data/VOC2007/test_name_size.txt"
@@ -779,7 +793,7 @@ net = caffe.NetSpec()
 # label_map_file=label_map_file,
 # transform_param=train_transform_param,
 # batch_sampler=batch_sampler)
-net.data, net.roi, net.roi_normalized, net.roi_score, net.roi_num, net.label = L.Python(
+net.data, net.roi_bk, net.roi_normalized_bk, net.roi_score_bk, net.roi_num_bk, net.label = L.Python(
     ntop=6,
     module='wsl_roi_anno_data_layer.layer',
     layer='RoIDataLayer',
@@ -794,8 +808,6 @@ ya_VGGNetBody(
     dropout=False,
     freeze_all_layers=True)
 
-AddExtraLayers_cpg(net, lr_mult=lr_mult)
-AddExtraLayers_cpg_loss(net)
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
 mbox_layers = CreateMultiBoxHead(
@@ -836,8 +848,10 @@ net.detection_out = L.DetectionOutput(
     *mbox_layers, detection_output_param=det_out_train_param)
 
 from_layers = [net['detection_out'], net['data']]
-net['roi_fb'], net['roi_score_fb'], net['roi_num_fb'] = L.Feedback(
-    *from_layers, ntop=3)
+net['roi'], net['roi_score'], net['roi_num'] = L.Feedback(*from_layers, ntop=3)
+
+AddExtraLayers_cpg(net, lr_mult=lr_mult)
+AddExtraLayers_cpg_loss(net)
 
 # Create the MultiBoxLossLayer.
 name = "mbox_loss"
@@ -912,6 +926,12 @@ net.detection_out = L.DetectionOutput(
     *mbox_layers,
     detection_output_param=det_out_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+
+from_layers = [net['detection_out'], net['data']]
+net['roi'], net['roi_score'], net['roi_num'] = L.Feedback(*from_layers, ntop=3)
+
+AddExtraLayers_cpg(net, lr_mult=0, is_test=True)
+
 net.detection_eval = L.DetectionEvaluate(
     net.detection_out,
     net.label,
@@ -964,9 +984,6 @@ with open(job_file, 'w') as f:
 # Copy the python script to job_dir.
 py_file = os.path.abspath(__file__)
 shutil.copy(py_file, job_dir)
-
-f = open(readme_file, 'w')
-f.close()
 
 # Run the job.
 os.chmod(job_file, stat.S_IRWXU)
