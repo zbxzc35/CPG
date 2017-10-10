@@ -191,7 +191,7 @@ __C.TRAIN.PASS_IM = 0
 
 __C.TRAIN.SHUFFLE = True
 
-__C.TRAIN.PSEUDO_PATH = ''
+__C.TRAIN.PSEUDO_PATH = 'None'
 
 #
 # Testing options

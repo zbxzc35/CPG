@@ -139,6 +139,7 @@ class RoIDataLayer(caffe.Layer):
         blobs = self._get_next_minibatch()
 
         if False:
+        # if True:
             vis_minibatch(
                 blobs['data'].copy(),
                 blobs['roi'].copy(),

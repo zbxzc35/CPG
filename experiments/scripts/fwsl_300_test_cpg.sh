@@ -7,11 +7,10 @@ export PYTHONUNBUFFERED="True"
 GPU_ID=$1
 NET=$2
 DATASET=$3
-NET_PREFIX=$4
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:4:$len}
+EXTRA_ARGS=${array[@]:3:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 is_next=false
@@ -67,7 +66,7 @@ case $DATASET in
 esac
 
 mkdir -p "experiments/logs/${EXP_DIR}"
-LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${NET_PREFIX}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
+LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
 LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
@@ -79,7 +78,14 @@ echo ---------------------------------------------------------------------
 
 python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL_score
 
-NET_FINAL=output/${EXP_DIR}/FWSL/${NET_PREFIX}.caffemodel
+./tools/fwsl/fc6fc7_to_wsl.py \
+	models/${PT_DIR}/${NET}/cpg/test.prototxt \
+	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30.caffemodel \
+	models/${PT_DIR}/${NET}/cpg/train_wsl.prototxt \
+	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_wsl.caffemodel
+
+
+NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_wsl.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel
 
 
 time ./tools/fwsl/test_net.py --gpu ${GPU_ID} \
@@ -88,6 +94,6 @@ time ./tools/fwsl/test_net.py --gpu ${GPU_ID} \
 	--imdb ${TEST_IMDB} \
 	--cfg experiments/cfgs/fwsl.yml \
 	${EXTRA_ARGS} \
-	EXP_DIR ${EXP_DIR}/FWSL_score \
+	EXP_DIR ${EXP_DIR}/FWSL \
 	TRAIN.SCALES [300] \
 	TEST.SCALES [300]

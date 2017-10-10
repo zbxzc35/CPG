@@ -142,19 +142,16 @@ python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/FWSL
 ./tools/fwsl/fc6fc7_to_wsl.py \
 	models/${PT_DIR}/${NET}/cpg/test.prototxt \
 	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30.caffemodel \
-	models/${PT_DIR}/${NET}/cpg/train_fc.prototxt \
-	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel
-
-NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_fc.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel
+	models/${PT_DIR}/${NET}/cpg/train_wsl.prototxt \
+	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_wsl.caffemodel
 
 
-echo ---------------------------------------------------------------------
-echo showing the solver file:
-cat "output/${EXP_DIR}/FWSL/solver.prototxt"
-echo ---------------------------------------------------------------------
+NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_wsl.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel
+
+
 time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
 	--solver output/${EXP_DIR}/FWSL/solver.prototxt \
-	--weights ${NET_FINAL}
+	--weights ${NET_FINAL} \
 	--imdb ${TRAIN_IMDB} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fwsl.yml \

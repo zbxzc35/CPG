@@ -212,7 +212,7 @@ def AddExtraLayers_cpg(net, lr_mult=1, is_test=False):
     out_layer = 'boost'
     net[out_layer] = L.Scale(net[from_layer], net['roi_scores'], axis=0)
 
-    if False:
+    if True:
         from_layer = out_layer
         out_layer = 'fc6_wsl'
         FcReluDropLayer(
@@ -248,7 +248,7 @@ def AddExtraLayers_cpg(net, lr_mult=1, is_test=False):
                 lr_mult=lr_mult,
                 has_filler=True)
 
-    if True:
+    if False:
         from_layer = out_layer
         out_layer = 'fc6_wsl'
         net[out_layer] = L.Convolution(
@@ -321,12 +321,7 @@ def AddExtraLayers_cpg(net, lr_mult=1, is_test=False):
         net['cpg_roi_select'], net['label_pos'], net['label_neg'] = L.MIL(
             *from_layers, cpg_param=cpg_train_param, ntop=3)
 
-    # reshape_param = {'shape': caffe_pb2.BlobShape(dim=[0, 0, 1, 1])}
-    reshape_param = {'shape': dict(dim=[0, 0, 1, 1])}
-    net['cpg_roi_select_reshape'] = L.Reshape(
-        net['cpg_roi_select'], reshape_param=reshape_param)
-
-    from_layers = [net['bbox_score'], net['cpg_roi_select_reshape']]
+    from_layers = [net['bbox_score'], net['cpg_roi_select']]
     net['bbox_prob'] = L.Eltwise(
         *from_layers,
         operation=caffe_pb2.EltwiseParameter.EltwiseOp.Value('PROD'))
@@ -731,7 +726,7 @@ solver_param = {
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
-    'test_interval': 10000,
+    'test_interval': 500,
     'eval_type': "detection",
     'ap_version': "11point",
     'test_initialization': False,
@@ -745,7 +740,7 @@ det_out_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k': 1
+        'top_k':1 
     },
     'save_output_param': {
         'output_directory': output_result_dir,
@@ -767,9 +762,9 @@ det_out_train_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k': 2048
+        'top_k': 512
     },
-    'keep_top_k': 1024,
+    'keep_top_k': 512,
     'confidence_threshold': 0.01,
     'code_type': code_type,
 }
@@ -782,6 +777,11 @@ det_eval_param = {
     'evaluate_difficult_gt': False,
     'name_size_file': name_size_file,
 }
+
+freeze_layers = [
+    'conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1', 'conv3_2',
+    'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3', 'conv5_1', 'conv5_2', 'conv5_3'
+]
 
 ### Hopefully you don't need to change the following ###
 # Check file.
@@ -809,6 +809,7 @@ net.data, net.rois_o, net.rois_normalized_o, net.roi_scores_o, net.roi_num_o, ne
     layer='RoIDataLayer',
     param_str="'num_classes': 20")
 
+# VGGNetBody(
 ya_VGGNetBody(
     net,
     from_layer='data',
@@ -816,7 +817,100 @@ ya_VGGNetBody(
     reduced=True,
     dilated=True,
     dropout=False,
+    # freeze_layers=freeze_layers)
     freeze_all_layers=True)
+
+AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
+
+mbox_layers = CreateMultiBoxHead(
+    net,
+    data_layer='data',
+    from_layers=mbox_source_layers,
+    use_batchnorm=use_batchnorm,
+    min_sizes=min_sizes,
+    max_sizes=max_sizes,
+    aspect_ratios=aspect_ratios,
+    steps=steps,
+    normalizations=normalizations,
+    num_classes=num_classes,
+    share_location=share_location,
+    flip=flip,
+    clip=clip,
+    prior_variance=prior_variance,
+    kernel_size=3,
+    pad=1,
+    lr_mult=lr_mult)
+
+mbox_layers_out = list(mbox_layers)
+conf_name = "mbox_conf"
+if multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.SOFTMAX:
+    reshape_name = "{}_reshape".format(conf_name)
+    net[reshape_name] = L.Reshape(
+        net[conf_name], shape=dict(dim=[0, -1, num_classes]))
+    softmax_name = "{}_softmax".format(conf_name)
+    net[softmax_name] = L.Softmax(net[reshape_name], axis=2)
+    flatten_name = "{}_flatten".format(conf_name)
+    net[flatten_name] = L.Flatten(net[softmax_name], axis=1)
+    mbox_layers_out[1] = net[flatten_name]
+elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
+    sigmoid_name = "{}_sigmoid".format(conf_name)
+    net[sigmoid_name] = L.Sigmoid(net[conf_name])
+    mbox_layers_out[1] = net[sigmoid_name]
+
+net.detection_out = L.DetectionOutput(
+    *mbox_layers_out, detection_output_param=det_out_train_param)
+
+from_layers = [net['detection_out'], net['data']]
+net['rois_f'], net['rois_normalized_f'], net['roi_scores_f'], net[
+    'roi_num_f'] = L.Feedback(
+        *from_layers, name='feedback', ntop=4, propagate_down=[False, False])
+
+AddExtraLayers_concat(net)
+AddExtraLayers_cpg(net, lr_mult=lr_mult)
+AddExtraLayers_cpg_loss(net)
+
+from_layers = [
+    net['bbox_prob'],
+    net['rois_normalized'],
+    net['label'],
+    net['data'],
+]
+net['pseudo_label'] = L.PseudoLabel(
+    *from_layers, ntop=1, propagate_down=[False, False, False, False])
+
+# Create the MultiBoxLossLayer.
+name = "mbox_loss"
+mbox_layers.append(net.pseudo_label)
+net[name] = L.MultiBoxLoss(
+    *mbox_layers,
+    multibox_loss_param=multibox_loss_param,
+    loss_param=loss_param,
+    include=dict(phase=caffe_pb2.Phase.Value('TRAIN')),
+    propagate_down=[True, True, False, False])
+
+with open(train_net_file, 'w') as f:
+    print('name: "{}_train"'.format(model_name), file=f)
+    print(net.to_proto(), file=f)
+shutil.copy(train_net_file, job_dir)
+
+# Create test net.
+net = caffe.NetSpec()
+net.data, net.label = CreateAnnotatedDataLayer(
+    test_data,
+    batch_size=test_batch_size,
+    train=False,
+    output_label=True,
+    label_map_file=label_map_file,
+    transform_param=test_transform_param)
+
+VGGNetBody(
+    net,
+    from_layer='data',
+    fully_conv=True,
+    reduced=True,
+    dilated=True,
+    dropout=False,
+    freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
@@ -855,51 +949,23 @@ elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
     mbox_layers[1] = net[sigmoid_name]
 
 net.detection_out = L.DetectionOutput(
-    *mbox_layers, detection_output_param=det_out_train_param)
-
-from_layers = [net['detection_out'], net['data']]
-net['rois_f'], net['rois_normalized_f'], net['roi_scores_f'], net[
-    'roi_num_f'] = L.Feedback(
-        *from_layers, name='feedback', ntop=4, propagate_down=[False, False])
-
-AddExtraLayers_concat(net)
-AddExtraLayers_cpg(net, lr_mult=lr_mult)
-AddExtraLayers_cpg_loss(net)
-
-from_layers = [
-    net['bbox_prob'],
-    net['rois_normalized'],
-    net['label'],
-    net['data'],
-]
-net['pseudo_label'] = L.PseudoLabel(
-    *from_layers, ntop=1, propagate_down=[False, False, False, False])
-
-# Create the MultiBoxLossLayer.
-name = "mbox_loss"
-mbox_layers.append(net.pseudo_label)
-net[name] = L.MultiBoxLoss(
     *mbox_layers,
-    multibox_loss_param=multibox_loss_param,
-    loss_param=loss_param,
-    include=dict(phase=caffe_pb2.Phase.Value('TRAIN')),
-    propagate_down=[True, True, False, False])
+    detection_output_param=det_out_param,
+    include=dict(phase=caffe_pb2.Phase.Value('TEST')))
 
-with open(train_net_file, 'w') as f:
-    print('name: "{}_train"'.format(model_name), file=f)
+net.detection_eval = L.DetectionEvaluate(
+    net.detection_out,
+    net.label,
+    detection_evaluate_param=det_eval_param,
+    include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+
+with open(test_net_file, 'w') as f:
+    print('name: "{}_test"'.format(model_name), file=f)
     print(net.to_proto(), file=f)
-shutil.copy(train_net_file, job_dir)
+shutil.copy(test_net_file, job_dir)
 
-# Create test net.
+# Create deploy net.
 net = caffe.NetSpec()
-# net.data, net.label = CreateAnnotatedDataLayer(
-# test_data,
-# batch_size=test_batch_size,
-# train=False,
-# output_label=True,
-# label_map_file=label_map_file,
-# transform_param=test_transform_param)
-# net.data, net.rois, net.rois_normalized, net.roi_scores, net.roi_num, net.label = L.Python(
 net.data, net.rois_o, net.rois_normalized_o, net.roi_scores_o, net.roi_num_o, net.label = L.Python(
     ntop=6,
     module='wsl_roi_anno_data_layer.layer',
@@ -912,7 +978,8 @@ VGGNetBody(
     fully_conv=True,
     reduced=True,
     dilated=True,
-    dropout=False)
+    dropout=False,
+    freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
@@ -969,12 +1036,6 @@ net.detection_eval = L.DetectionEvaluate(
     detection_evaluate_param=det_eval_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))
 
-with open(test_net_file, 'w') as f:
-    print('name: "{}_test"'.format(model_name), file=f)
-    print(net.to_proto(), file=f)
-shutil.copy(test_net_file, job_dir)
-
-# Create deploy net.
 # Remove the first and last layer from test net.
 deploy_net = net
 with open(deploy_net_file, 'w') as f:

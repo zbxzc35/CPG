@@ -146,6 +146,7 @@ def get_minibatch(roidb, num_classes):
     blobs['roi_score'] = np.add(
         np.reshape(roi_score_blob, [roi_score_blob.shape[0]]), 1)
 
+    roi_num_blob = np.reshape(roi_num_blob, [roi_num_blob.shape[0]])
     blobs['roi_num'] = roi_num_blob
 
     blobs['label'] = label_blob

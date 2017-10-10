@@ -151,6 +151,7 @@ def get_minibatch(roidb, num_classes):
     blobs['roi_score'] = np.add(
         np.reshape(roi_score_blob, [roi_score_blob.shape[0]]), 1)
 
+    roi_num_blob = np.reshape(roi_num_blob, [roi_num_blob.shape[0]])
     blobs['roi_num'] = roi_num_blob
 
     blobs['label'] = label_blob
@@ -311,12 +312,13 @@ def vis_minibatch(ims_blob,
                 continue
             num_img_roi += 1
             if num_img_roi > num_roi_vis:
-                break
+                continue
             x1 = int(roi[1])
             y1 = int(roi[2])
             x2 = int(roi[3])
             y2 = int(roi[4])
             cv2.rectangle(im, (x1, y1), (x2, y2), (0, 0, 255), 1)
 
+        print 'num_img_roi: ', num_img_roi
         cv2.imshow('wsl image ' + str(i), im)
     cv2.waitKey(0)
