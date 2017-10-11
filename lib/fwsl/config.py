@@ -35,12 +35,12 @@ __C.TRAIN.ROIS_PER_IM = 10000
 __C.TRAIN.USE_FLIPPED = True
 
 __C.TRAIN.USE_DISTORTION = True
-__C.TRAIN.brightness_prob = 0.5
+__C.TRAIN.brightness_prob = 0.0
 __C.TRAIN.brightness_delta = 32
 __C.TRAIN.contrast_prob = 0.5
 __C.TRAIN.contrast_lower = 0.5
 __C.TRAIN.contrast_upper = 1.5
-__C.TRAIN.hue_prob = 0.5
+__C.TRAIN.hue_prob = 0.0
 __C.TRAIN.hue_delta = 18
 __C.TRAIN.saturation_prob = 0.5
 __C.TRAIN.saturation_lower = 0.5
@@ -72,7 +72,7 @@ __C.TRAIN.batch_sampler = [
     }),
 ]
 
-__C.TRAIN.USE_CROP = True
+__C.TRAIN.USE_CROP = False
 __C.TRAIN.CROP = 0.9
 
 __C.TRAIN.INTERP_MODEL = ['LINEAR', 'AREA', 'NEAREST', 'CUBIC', 'LANCZOS4']
@@ -201,8 +201,7 @@ __C.USE_BG = False
 
 __C.SPATIAL_SCALE = 1. / 16.
 
-# __C.RESIZE_MODE = 'WARP'
-__C.RESIZE_MODE = 'FIT_SMALLEST'
+__C.RESIZE_MODE = 'WARP'
 
 
 def get_vis_dir(imdb, net=None):

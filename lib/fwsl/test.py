@@ -7,53 +7,11 @@ import cv2
 import caffe
 from fast_rcnn.nms_wrapper import nms
 import cPickle
-from utils.blob import im_list_to_blob
+from utils.im_transforms import get_image_blob
 import os
 import time
 import pprint
 from wsl_roi_data_layer.minibatch import get_inner_outer_roi
-
-
-def _get_image_blob(im):
-    """Converts an image into a network input.
-
-    Arguments:
-        im (ndarray): a color image in BGR order
-
-    Returns:
-        blob (ndarray): a data blob holding an image pyramid
-        im_scale_factors (list): list of image scales (relative to im) used
-            in the image pyramid
-    """
-    im_orig = im.astype(np.float32, copy=True)
-    im_orig -= cfg.PIXEL_MEANS
-
-    im_shape = im_orig.shape
-    im_size_min = np.min(im_shape[0:2])
-    im_size_max = np.max(im_shape[0:2])
-
-    processed_ims = []
-    im_scale_factors = []
-
-    for target_size in cfg.TEST.SCALES:
-        im_scale = float(target_size) / float(im_size_min)
-        # Prevent the biggest axis from being more than MAX_SIZE
-        if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
-            im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
-        im = cv2.resize(
-            im_orig,
-            None,
-            None,
-            fx=im_scale,
-            fy=im_scale,
-            interpolation=cv2.INTER_LINEAR)
-        im_scale_factors.append(im_scale)
-        processed_ims.append(im)
-
-    # Create a blob to hold the input images
-    blob = im_list_to_blob(processed_ims)
-
-    return blob, np.array(im_scale_factors)
 
 
 def _get_rois_blob(im_rois, im_scale_factors):
@@ -113,7 +71,7 @@ def _project_im_rois(im_rois, scales):
     """
     im_rois = im_rois.astype(np.float32, copy=False)
 
-    if len(scales) > 1:
+    if scales.shape[0] > 1:
         print 'current only support one scale each forward'
         exit()
 
@@ -127,7 +85,19 @@ def _project_im_rois(im_rois, scales):
     else:
         levels = np.zeros((im_rois.shape[0], 1), dtype=np.int)
 
-    rois = im_rois * scales[levels]
+    # rois = im_rois * scales[levels]
+
+    scales_w = scales[:, 1]
+    scales_h = scales[:, 0]
+
+    rois02 = im_rois[:, [0, 2]] * scales_w[levels]
+    rois13 = im_rois[:, [1, 3]] * scales_h[levels]
+
+    rois = im_rois.copy()
+    rois[:, 0] = rois02[:, 0]
+    rois[:, 1] = rois13[:, 0]
+    rois[:, 2] = rois02[:, 1]
+    rois[:, 3] = rois13[:, 1]
 
     return rois, levels
 
@@ -142,7 +112,19 @@ def _unproject_im_rois(im_rois, scales):
     else:
         levels = np.zeros((im_rois.shape[0], 1), dtype=np.int)
 
-    rois = im_rois / scales[levels]
+    # rois = im_rois / scales[levels]
+
+    scales_w = scales[:, 1]
+    scales_h = scales[:, 0]
+
+    rois02 = im_rois[:, [0, 2]] / scales_w[levels]
+    rois13 = im_rois[:, [1, 3]] / scales_h[levels]
+
+    rois = im_rois.copy()
+    rois[:, 0] = rois02[:, 0]
+    rois[:, 1] = rois13[:, 0]
+    rois[:, 2] = rois02[:, 1]
+    rois[:, 3] = rois13[:, 1]
 
     return rois
 
@@ -188,7 +170,7 @@ def _get_roi_num_blob(rois_blob):
 def _get_blobs(im, rois, roi_scores):
     """Convert an image and RoIs within that image into network inputs."""
     blobs = {'data': None, 'rois': None, 'roi_scores': None}
-    blobs['data'], im_scale_factors = _get_image_blob(im)
+    blobs['data'], im_scale_factors = get_image_blob(im)
     blobs['rois'], levels = _get_rois_blob(rois, im_scale_factors)
     blobs['rois_normalized'] = _get_normalize_roi_blob(rois, im.shape, levels)
     blobs['roi_scores'] = _get_roi_scores_blob(roi_scores, im_scale_factors,

@@ -510,6 +510,12 @@ det_eval_param = {
     'name_size_file': name_size_file,
 }
 
+freeze_layers = [
+    'conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1', 'conv3_2',
+    'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3', 'conv5_1', 'conv5_2',
+    'conv5_3', 'fc6', 'fc7', 'fc8'
+]
+
 ### Hopefully you don't need to change the following ###
 # Check file.
 check_if_exist(train_data)
@@ -536,21 +542,22 @@ net.data, net.label = L.Python(
     layer='AnnotatedDataLayer',
     param_str="'num_classes': 20")
 
-# VGGNetBody(
-# net,
-# from_layer='data',
-# fully_conv=True,
-# reduced=True,
-# dilated=True,
-# dropout=False)
-ya_VGGNetBody(
+VGGNetBody(
     net,
     from_layer='data',
     fully_conv=True,
     reduced=True,
     dilated=True,
     dropout=False,
-    freeze_all_layers=True)
+    freeze_layers=freeze_layers)
+# ya_VGGNetBody(
+# net,
+# from_layer='data',
+# fully_conv=True,
+# reduced=True,
+# dilated=True,
+# dropout=False,
+# freeze_all_layers=True)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
@@ -604,7 +611,8 @@ VGGNetBody(
     fully_conv=True,
     reduced=True,
     dilated=True,
-    dropout=False)
+    dropout=False,
+    freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
@@ -646,6 +654,7 @@ net.detection_out = L.DetectionOutput(
     *mbox_layers,
     detection_output_param=det_out_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))
+
 net.detection_eval = L.DetectionEvaluate(
     net.detection_out,
     net.label,

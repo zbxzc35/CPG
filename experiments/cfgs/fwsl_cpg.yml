@@ -22,6 +22,6 @@ TEST:
 RESIZE_MODE: 'WARP'
 DEDUP_BOXES: 0.0
 RNG_SEED: 6
-EXP_DIR: fwsl/fwsl
+EXP_DIR: fwsl/cpg
 USE_ROI_SCORE: True
 WSL: True

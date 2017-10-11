@@ -94,8 +94,8 @@ def get_minibatch(roidb, num_classes):
 
         #-------------------------------------------------------------
         target_size = cfg.TRAIN.SCALES[random_scale_inds[i_im]]
-        img, img_scale = prep_im_for_blob(img, cfg.PIXEL_MEANS, target_size,
-                                          cfg.TRAIN.MAX_SIZE)
+        img, img_scale = utils.im_transforms.prep_im_for_blob(
+            img, cfg.PIXEL_MEANS, target_size, cfg.TRAIN.MAX_SIZE)
 
         processed_ims.append(img)
 
@@ -109,7 +109,7 @@ def get_minibatch(roidb, num_classes):
             roi, width=img.shape[1], height=img.shape[0])
 
         # 归一化
-        roi_n = _normalize_img_roi(roi, img.shape)
+        roi_n = utils.im_transforms.normalize_img_roi(roi, img.shape)
 
         if cfg.CONTEXT:
             roi_inner, roi_outer = get_inner_outer_roi(roi, cfg.CONTEXT_RATIO)
@@ -157,73 +157,6 @@ def get_minibatch(roidb, num_classes):
     blobs['label'] = label_blob
 
     return blobs
-
-
-def prep_im_for_blob(im, pixel_means, target_size, max_size):
-    """Mean subtract and scale an image for use in a blob."""
-    im = im.astype(np.float32, copy=False)
-    im -= pixel_means
-    im_shape = im.shape
-
-    #-------------------------------------------------------------
-    interp_mode = cv2.INTER_LINEAR
-    if len(cfg.TRAIN.INTERP_MODEL) > 0:
-        idx = npr.randint(len(cfg.TRAIN.INTERP_MODEL))
-        interp_name = cfg.TRAIN.INTERP_MODEL[idx]
-        if interp_name == 'LINEAR':
-            interp_mode = cv2.INTER_LINEAR
-        elif interp_name == 'AREA':
-            interp_mode = cv2.INTER_AREA
-        elif interp_name == 'NEAREST':
-            interp_mode = cv2.INTER_NEAREST
-        elif interp_name == 'CUBIC':
-            interp_mode = cv2.INTER_CUBIC
-        elif interp_name == 'LANCZOS4':
-            interp_mode = cv2.INTER_LANCZOS4
-        else:
-            print 'Unknow interp mode: ', interp_name
-            exit(0)
-
-    #-------------------------------------------------------------
-    if cfg.RESIZE_MODE == 'WARP':
-        im_scale_h = float(target_size) / float(im_shape[0])
-        im_scale_w = float(target_size) / float(im_shape[1])
-        im = cv2.resize(
-            im,
-            None,
-            None,
-            fx=im_scale_w,
-            fy=im_scale_h,
-            interpolation=interp_mode)
-        im_scale = [im_scale_h, im_scale_w]
-    elif cfg.RESIZE_MODE == 'FIT_SMALLEST':
-        im_size_min = np.min(im_shape[0:2])
-        im_size_max = np.max(im_shape[0:2])
-        im_scale = float(target_size) / float(im_size_min)
-        # Prevent the biggest axis from being more than MAX_SIZE
-        if np.round(im_scale * im_size_max) > max_size:
-            im_scale = float(max_size) / float(im_size_max)
-        im = cv2.resize(
-            im,
-            None,
-            None,
-            fx=im_scale,
-            fy=im_scale,
-            interpolation=interp_mode)
-        im_scale = [im_scale, im_scale]
-    else:
-        print 'Unknow resize mode.'
-
-    return im, im_scale
-
-
-def _normalize_img_roi(img_roi, img_shape):
-    roi_normalized = np.copy(img_roi)
-    roi_normalized[:, 0] = roi_normalized[:, 0] / img_shape[1]
-    roi_normalized[:, 1] = roi_normalized[:, 1] / img_shape[0]
-    roi_normalized[:, 2] = roi_normalized[:, 2] / img_shape[1]
-    roi_normalized[:, 3] = roi_normalized[:, 3] / img_shape[0]
-    return roi_normalized
 
 
 def _project_im_rois(roi, crop_bbox, img_scale=[1, 1]):

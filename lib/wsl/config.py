@@ -206,7 +206,6 @@ __C.USE_BG = False
 
 __C.SPATIAL_SCALE = 1. / 16.
 
-# __C.RESIZE_MODE = 'WARP'
 __C.RESIZE_MODE = 'FIT_SMALLEST'
 
 

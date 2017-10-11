@@ -740,7 +740,7 @@ det_out_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k':1 
+        'top_k': 1024
     },
     'save_output_param': {
         'output_directory': output_result_dir,
@@ -749,6 +749,20 @@ det_out_param = {
         'label_map_file': label_map_file,
         'name_size_file': name_size_file,
         'num_test_image': num_test_image,
+    },
+    'keep_top_k': 1024,
+    'confidence_threshold': 0.01,
+    'code_type': code_type,
+}
+
+# parameters for generating detection output.
+det_out_test_param = {
+    'num_classes': num_classes,
+    'share_location': share_location,
+    'background_label_id': background_label_id,
+    'nms_param': {
+        'nms_threshold': 0.45,
+        'top_k': 1
     },
     'keep_top_k': 1,
     'confidence_threshold': 0.01,
@@ -780,7 +794,8 @@ det_eval_param = {
 
 freeze_layers = [
     'conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', 'conv3_1', 'conv3_2',
-    'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3', 'conv5_1', 'conv5_2', 'conv5_3'
+    'conv3_3', 'conv4_1', 'conv4_2', 'conv4_3', 'conv5_1', 'conv5_2',
+    'conv5_3', 'fc6', 'fc7', 'fc8'
 ]
 
 ### Hopefully you don't need to change the following ###
@@ -809,16 +824,22 @@ net.data, net.rois_o, net.rois_normalized_o, net.roi_scores_o, net.roi_num_o, ne
     layer='RoIDataLayer',
     param_str="'num_classes': 20")
 
-# VGGNetBody(
-ya_VGGNetBody(
+VGGNetBody(
     net,
     from_layer='data',
     fully_conv=True,
     reduced=True,
     dilated=True,
     dropout=False,
-    # freeze_layers=freeze_layers)
-    freeze_all_layers=True)
+    freeze_layers=freeze_layers)
+# ya_VGGNetBody(
+# net,
+# from_layer='data',
+# fully_conv=True,
+# reduced=True,
+# dilated=True,
+# dropout=False,
+# freeze_all_layers=True)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
@@ -1019,7 +1040,7 @@ elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
 
 net.detection_out = L.DetectionOutput(
     *mbox_layers,
-    detection_output_param=det_out_param,
+    detection_output_param=det_out_test_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))
 
 from_layers = [net['detection_out'], net['data']]

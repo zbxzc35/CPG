@@ -6,6 +6,8 @@ import numpy.random as npr
 import cv2
 from configure import cfg
 
+import utils.blob
+
 
 def GenerateBatchSamples(roi, img_shape):
     sampled_bboxes = []
@@ -478,3 +480,127 @@ def RandomOrderChannels(in_img, random_order_prob):
     else:
         out_img = in_img
     return out_img
+
+def prep_im_for_blob(im, pixel_means, target_size, max_size):
+    """Mean subtract and scale an image for use in a blob."""
+    im = im.astype(np.float32, copy=False)
+    im -= pixel_means
+    im_shape = im.shape
+
+    #-------------------------------------------------------------
+    interp_mode = cv2.INTER_LINEAR
+    if len(cfg.TRAIN.INTERP_MODEL) > 0:
+        idx = npr.randint(len(cfg.TRAIN.INTERP_MODEL))
+        interp_name = cfg.TRAIN.INTERP_MODEL[idx]
+        if interp_name == 'LINEAR':
+            interp_mode = cv2.INTER_LINEAR
+        elif interp_name == 'AREA':
+            interp_mode = cv2.INTER_AREA
+        elif interp_name == 'NEAREST':
+            interp_mode = cv2.INTER_NEAREST
+        elif interp_name == 'CUBIC':
+            interp_mode = cv2.INTER_CUBIC
+        elif interp_name == 'LANCZOS4':
+            interp_mode = cv2.INTER_LANCZOS4
+        else:
+            print 'Unknow interp mode: ', interp_name
+            exit(0)
+
+    if cfg.RESIZE_MODE == 'WARP':
+        im_scale_h = float(target_size) / float(im_shape[0])
+        im_scale_w = float(target_size) / float(im_shape[1])
+        im = cv2.resize(
+            im,
+            None,
+            None,
+            fx=im_scale_w,
+            fy=im_scale_h,
+            interpolation=interp_mode)
+        im_scale = [im_scale_h, im_scale_w]
+    elif cfg.RESIZE_MODE == 'FIT_SMALLEST':
+        im_size_min = np.min(im_shape[0:2])
+        im_size_max = np.max(im_shape[0:2])
+        im_scale = float(target_size) / float(im_size_min)
+        # Prevent the biggest axis from being more than MAX_SIZE
+        if np.round(im_scale * im_size_max) > max_size:
+            im_scale = float(max_size) / float(im_size_max)
+        im = cv2.resize(
+            im,
+            None,
+            None,
+            fx=im_scale,
+            fy=im_scale,
+            interpolation=interp_mode)
+        im_scale = [im_scale, im_scale]
+    else:
+        print 'Unknow resize mode.'
+
+    return im, im_scale
+
+def get_image_blob(im):
+    """Converts an image into a network input.
+
+    Arguments:
+        im (ndarray): a color image in BGR order
+
+    Returns:
+        blob (ndarray): a data blob holding an image pyramid
+        im_scale_factors (list): list of image scales (relative to im) used
+            in the image pyramid
+    """
+    im_orig = im.astype(np.float32, copy=True)
+    im_orig -= cfg.PIXEL_MEANS
+
+    im_shape = im_orig.shape
+
+    processed_ims = []
+    im_scale_factors = []
+
+
+    if cfg.RESIZE_MODE == 'WARP':
+        for target_size in cfg.TEST.SCALES:
+            im_scale_h = float(target_size) / float(im_shape[0])
+            im_scale_w = float(target_size) / float(im_shape[1])
+            im = cv2.resize(
+                im,
+                None,
+                None,
+                fx=im_scale_w,
+                fy=im_scale_h,
+                interpolation=cv2.INTER_LINEAR)
+            im_scale = [im_scale_h, im_scale_w]
+
+            im_scale_factors.append(im_scale)
+            processed_ims.append(im)
+    elif cfg.RESIZE_MODE == 'FIT_SMALLEST':
+        im_size_min = np.min(im_shape[0:2])
+        im_size_max = np.max(im_shape[0:2])
+        for target_size in cfg.TEST.SCALES:
+            im_scale = float(target_size) / float(im_size_min)
+            # Prevent the biggest axis from being more than MAX_SIZE
+            if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
+                im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
+            im = cv2.resize(
+                im_orig,
+                None,
+                None,
+                fx=im_scale,
+                fy=im_scale,
+                interpolation=cv2.INTER_LINEAR)
+            im_scale = [im_scale, im_scale]
+
+            im_scale_factors.append(im_scale)
+            processed_ims.append(im)
+
+    # Create a blob to hold the input images
+    blob = utils.blob.im_list_to_blob(processed_ims)
+
+    return blob, np.array(im_scale_factors)
+
+def normalize_img_roi(img_roi, img_shape):
+    roi_normalized = np.copy(img_roi)
+    roi_normalized[:, 0] = roi_normalized[:, 0] / img_shape[1]
+    roi_normalized[:, 1] = roi_normalized[:, 1] / img_shape[0]
+    roi_normalized[:, 2] = roi_normalized[:, 2] / img_shape[1]
+    roi_normalized[:, 3] = roi_normalized[:, 3] / img_shape[0]
+    return roi_normalized
