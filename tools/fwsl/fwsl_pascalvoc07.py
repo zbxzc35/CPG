@@ -832,14 +832,6 @@ VGGNetBody(
     dilated=True,
     dropout=False,
     freeze_layers=freeze_layers)
-# ya_VGGNetBody(
-# net,
-# from_layer='data',
-# fully_conv=True,
-# reduced=True,
-# dilated=True,
-# dropout=False,
-# freeze_all_layers=True)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 

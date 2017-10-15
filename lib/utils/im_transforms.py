@@ -517,7 +517,7 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
             fx=im_scale_w,
             fy=im_scale_h,
             interpolation=interp_mode)
-        im_scale = [im_scale_h, im_scale_w]
+        im_scales = [im_scale_h, im_scale_w]
     elif cfg.RESIZE_MODE == 'FIT_SMALLEST':
         im_size_min = np.min(im_shape[0:2])
         im_size_max = np.max(im_shape[0:2])
@@ -532,11 +532,12 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
             fx=im_scale,
             fy=im_scale,
             interpolation=interp_mode)
-        im_scale = [im_scale, im_scale]
+        im_scales = [im_scale, im_scale]
     else:
         print 'Unknow resize mode.'
+        exit()
 
-    return im, im_scale
+    return im, im_scales
 
 
 def get_image_blob(im):

@@ -2,7 +2,7 @@ TRAIN:
         SCALES: [300]
         # TODO(YH): 为了batchsize32
         MAX_SIZE: 300
-        IMS_PER_BATCH: 32
+        IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True

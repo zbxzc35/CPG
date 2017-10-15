@@ -557,10 +557,10 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
                 .astype(np.float32, copy=False)
             keep = nms(cls_dets, cfg.TEST.NMS)
             cls_dets = cls_dets[keep, :]
-            if vis:
+            if vis or True:
                 # vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
-                vis_detections_highest(
-                    im, imdb.classes[j], cls_dets, thresh=0.3)
+                # vis_detections_highest(
+                    # im, imdb.classes[j], cls_dets, thresh=0.3)
                 vis_detections(im, imdb.classes[j], cls_dets, thresh=0.03)
 
             all_boxes[j][i] = cls_dets
