@@ -481,6 +481,7 @@ def RandomOrderChannels(in_img, random_order_prob):
         out_img = in_img
     return out_img
 
+
 def prep_im_for_blob(im, pixel_means, target_size, max_size):
     """Mean subtract and scale an image for use in a blob."""
     im = im.astype(np.float32, copy=False)
@@ -537,6 +538,7 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
 
     return im, im_scale
 
+
 def get_image_blob(im):
     """Converts an image into a network input.
 
@@ -555,7 +557,6 @@ def get_image_blob(im):
 
     processed_ims = []
     im_scale_factors = []
-
 
     if cfg.RESIZE_MODE == 'WARP':
         for target_size in cfg.TEST.SCALES:
@@ -596,6 +597,7 @@ def get_image_blob(im):
     blob = utils.blob.im_list_to_blob(processed_ims)
 
     return blob, np.array(im_scale_factors)
+
 
 def normalize_img_roi(img_roi, img_shape):
     roi_normalized = np.copy(img_roi)

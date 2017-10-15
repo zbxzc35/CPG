@@ -191,7 +191,8 @@ __C.TRAIN.PASS_IM = 0
 
 __C.TRAIN.SHUFFLE = True
 
-__C.TRAIN.PSEUDO_PATH = 'None'
+__C.TRAIN.USE_PSEUDO = False
+__C.TRAIN.PSEUDO_PATH = 'data/VOC2007/noise/'
 
 #
 # Testing options
