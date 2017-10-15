@@ -1,7 +1,6 @@
 TRAIN:
         SCALES: [300]
-        # TODO(YH): 为了batchsize32
-        MAX_SIZE: 300
+        MAX_SIZE: 2000
         IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
         SNAPSHOT_ITERS: 1
@@ -20,7 +19,7 @@ TEST:
         PROPOSAL_METHOD: mcg
         USE_FLIPPED: False
 
-RESIZE_MODE: 'WARP'
+RESIZE_MODE: 'FIT_SMALLEST'
 DEDUP_BOXES: 0.0
 RNG_SEED: 6
 EXP_DIR: fwsl/ssd
