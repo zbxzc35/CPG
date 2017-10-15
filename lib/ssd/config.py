@@ -156,6 +156,10 @@ __C.TRAIN.batch_sampler = [
     }),
 ]
 
+# TODO(YH): This is useless
+__C.TRAIN.USE_CROP = False
+__C.TRAIN.CROP = 0.9
+
 __C.TRAIN.INTERP_MODEL = ['LINEAR', 'AREA', 'NEAREST', 'CUBIC', 'LANCZOS4']
 
 __C.TRAIN.ROI_AU = False

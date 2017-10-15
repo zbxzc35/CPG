@@ -1,5 +1,4 @@
 TRAIN:
-        SCALES: [300]
         MAX_SIZE: 2000
         IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
@@ -13,7 +12,6 @@ TRAIN:
         USE_CROP: False
 
 TEST:
-        SCALES: [300]
         MAX_SIZE: 2000
         NMS: 0.5
         PROPOSAL_METHOD: mcg

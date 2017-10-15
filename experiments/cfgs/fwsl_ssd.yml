@@ -1,5 +1,4 @@
 TRAIN:
-        SCALES: [300]
         # TODO(YH): 为了batchsize32
         MAX_SIZE: 300
         IMS_PER_BATCH: 1
@@ -14,7 +13,6 @@ TRAIN:
         USE_CROP: False
 
 TEST:
-        SCALES: [300]
         MAX_SIZE: 2000
         NMS: 0.5
         PROPOSAL_METHOD: mcg
