@@ -1,7 +1,9 @@
 import caffe
 from configure import cfg
-from wsl_roi_data_layer.minibatch import get_minibatch
-# from wsl_roi_data_layer.minibatch_bk import get_minibatch
+
+# from wsl_roi_data_layer.minibatch import get_minibatch
+from wsl_roi_data_layer.minibatch_bk import get_minibatch
+
 from wsl_roi_data_layer.minibatch import vis_minibatch
 import numpy as np
 import yaml

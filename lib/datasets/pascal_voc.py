@@ -225,6 +225,8 @@ class pascal_voc(imdb):
                 print '{:d} / {:d}'.format(im_i + 1, self.num_images)
             num_objs = 0
 
+            img_size = PIL.Image.open(self.image_path_at(im_i)).size
+
             # when cfg.WSL = False, background class is in.
             # detection.pkl only has 20 classes
             # fast_rcnn need 21 classes
@@ -240,8 +242,8 @@ class pascal_voc(imdb):
                 if dets.shape[0] > 0:
                     num_objs += 1
 
-            if num_objs == 0:
-                continue
+            # if num_objs == 0:
+            # continue
 
             boxes = np.zeros((num_objs, 4), dtype=np.uint16)
             gt_classes = np.zeros((num_objs), dtype=np.int32)
@@ -272,10 +274,13 @@ class pascal_voc(imdb):
                         continue
                     max_score = score
 
-                    assert x1>=0
-                    assert y1>=0
+                    assert x1 >= 0
+                    assert y1 >= 0
                     assert x2 >= x1
                     assert y2 >= y1
+                    assert x2 < img_size[0]
+                    assert y2 < img_size[1]
+
                     boxes[obj_i, :] = [x1, y1, x2, y2]
                     gt_classes[obj_i] = cls
                     overlaps[obj_i, cls] = 1.0
@@ -289,7 +294,6 @@ class pascal_voc(imdb):
             # if True:
             if False:
                 im = cv2.imread(self.image_path_at(im_i))
-                print boxes
                 for obj_i in range(num_objs):
                     cv2.rectangle(im, (boxes[obj_i][0], boxes[obj_i][1]),
                                   (boxes[obj_i][2], boxes[obj_i][3]), (255, 0,
@@ -659,6 +663,9 @@ class pascal_voc(imdb):
             if i % 1000 == 0:
                 print '{:d} / {:d}'.format(i + 1, len(self._image_index))
 
+            img_size = PIL.Image.open(self.image_path_at(i)).size
+            print index, img_size
+
             box_file = os.path.join(
                 cfg.DATA_DIR,
                 'MCG-Pascal-Main_trainvaltest_{}-boxes'.format(self._year),
@@ -667,11 +674,19 @@ class pascal_voc(imdb):
             raw_data = sio.loadmat(box_file)['boxes']
             score_data = sio.loadmat(box_file)['scores']
 
-            boxes = np.maximum(raw_data - 1, 0).astype(np.uint16)
+            # boxes = np.maximum(raw_data - 1, 0).astype(np.uint16)
+            boxes = raw_data.astype(np.uint16) - 1
             scores = score_data.astype(np.float)
 
             # Boxes from the MCG website are in (y1, x1, y2, x2) order
             boxes = boxes[:, (1, 0, 3, 2)]
+
+            assert (boxes[:, 0] >= 0).all()
+            assert (boxes[:, 1] >= 0).all()
+            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            assert (boxes[:, 3] >= boxes[:, 1]).all()
+            assert (boxes[:, 2] < img_size[0]).all()
+            assert (boxes[:, 3] < img_size[1]).all()
 
             keep = ds_utils.unique_boxes(boxes)
             boxes = boxes[keep, :]
