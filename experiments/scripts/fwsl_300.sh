@@ -76,46 +76,46 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-#=========================================================================
-#第一步
-echo ---------------------------------------------------------------------
-echo showing the solver file:
-cat "models/${PT_DIR}/${NET}/cpg/solver.prototxt"
-echo ---------------------------------------------------------------------
-time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-	--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
-	--weights data/imagenet_models/${NET}.v2.caffemodel \
-	--imdb ${TRAIN_IMDB} \
-	--iters ${ITERS} \
-	--cfg experiments/cfgs/fwsl_cpg.yml \
-	${EXTRA_ARGS} \
-	EXP_DIR ${EXP_DIR}/CPG \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+##=========================================================================
+##第一步
+#echo ---------------------------------------------------------------------
+#echo showing the solver file:
+#cat "models/${PT_DIR}/${NET}/cpg/solver.prototxt"
+#echo ---------------------------------------------------------------------
+#time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
+	#--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
+	#--weights data/imagenet_models/${NET}.v2.caffemodel \
+	#--imdb ${TRAIN_IMDB} \
+	#--iters ${ITERS} \
+	#--cfg experiments/cfgs/fwsl_cpg.yml \
+	#${EXTRA_ARGS} \
+	#EXP_DIR ${EXP_DIR}/CPG \
+	#TRAIN.SCALES [300] \
+	#TEST.SCALES [300]
 
-set +x
-NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
-set -x
+#set +x
+#NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
+#set -x
 
-time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-	--net ${NET_FINAL} \
-	--imdb ${TEST_IMDB} \
-	--cfg experiments/cfgs/fwsl_cpg.yml \
-	${EXTRA_ARGS} \
-	EXP_DIR ${EXP_DIR}/CPG \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+#time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
+	#--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+	#--net ${NET_FINAL} \
+	#--imdb ${TEST_IMDB} \
+	#--cfg experiments/cfgs/fwsl_cpg.yml \
+	#${EXTRA_ARGS} \
+	#EXP_DIR ${EXP_DIR}/CPG \
+	#TRAIN.SCALES [300] \
+	#TEST.SCALES [300]
 
-time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-	--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-	--net ${NET_FINAL} \
-	--imdb ${TRAIN_IMDB} \
-	--cfg experiments/cfgs/fwsl_cpg.yml \
-	${EXTRA_ARGS} \
-	EXP_DIR ${EXP_DIR}/CPG \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+#time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
+	#--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+	#--net ${NET_FINAL} \
+	#--imdb ${TRAIN_IMDB} \
+	#--cfg experiments/cfgs/fwsl_cpg.yml \
+	#${EXTRA_ARGS} \
+	#EXP_DIR ${EXP_DIR}/CPG \
+	#TRAIN.SCALES [300] \
+	#TEST.SCALES [300]
 
 #=========================================================================
 #第二步

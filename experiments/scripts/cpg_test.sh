@@ -58,7 +58,8 @@ case $DATASET in
 esac
 
 mkdir -p "experiments/logs/${EXP_DIR}"
-LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${NET_PREFIX}_${EXTRA_ARGS_SLUG}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
+EXTRA_ARGS_SLUG_=`echo "$EXTRA_ARGS_SLUG" | sed 's/\//_/g'`
+LOG="experiments/logs/${EXP_DIR}/${0##*/}_${NET}_${NET_PREFIX}_${EXTRA_ARGS_SLUG_}_`date +'%Y-%m-%d_%H-%M-%S'`.log"
 LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"

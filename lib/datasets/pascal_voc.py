@@ -272,6 +272,8 @@ class pascal_voc(imdb):
                         continue
                     max_score = score
 
+                    assert x1>=0
+                    assert y1>=0
                     assert x2 >= x1
                     assert y2 >= y1
                     boxes[obj_i, :] = [x1, y1, x2, y2]

@@ -106,11 +106,20 @@ class imdb(object):
         widths = self._get_widths()
         for i in xrange(num_images):
             boxes = self.roidb[i]['boxes'].copy()
+            for j in range(boxes.shape[0]):
+                assert boxes[j,2]>=boxes[j,0],'before {} {} {} vs {}'.format(i,widths[i],boxes[j,2],boxes[j,0])
+                assert boxes[j,2]>=0,'before {} {} {} vs {}'.format(i,widths[i],boxes[j,2],boxes[j,0])
+                assert boxes[j,0]>=0,'before {} {} {} vs {}'.format(i,widths[i],boxes[j,2],boxes[j,0])
+            print boxes
+            print widths[i]
             oldx1 = boxes[:, 0].copy()
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
-            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            print boxes
+            assert (boxes[:, 2] >= boxes[:, 0]).all(),boxes[:,0]
+            for j in range(boxes.shape[0]):
+                assert boxes[j,2]>=boxes[j,0],'after {} {} {} vs {}'.format(i,widths[i],boxes[j,2],boxes[j,0])
             entry = {'boxes': boxes,
                      'box_scores': self.roidb[i]['box_scores'],
                      'gt_overlaps': self.roidb[i]['gt_overlaps'],
