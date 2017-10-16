@@ -172,7 +172,9 @@ class pascal_voc(imdb):
         # print '{} gt roidb loaded from {}'.format(self.name, cache_file)
         # return roidb
 
-        if cfg.TRAIN.has_key('USE_PSEUDO') and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+        if cfg.TRAIN.has_key(
+                'USE_PSEUDO'
+        ) and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
             tmp = self._data_path
             self._data_path = cfg.TRAIN.PSEUDO_PATH
 
@@ -180,7 +182,9 @@ class pascal_voc(imdb):
             self._load_pascal_annotation(index) for index in self.image_index
         ]
 
-        if cfg.TRAIN.has_key('USE_PSEUDO') and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+        if cfg.TRAIN.has_key(
+                'USE_PSEUDO'
+        ) and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
             self._data_path = tmp
 
         # with open(cache_file, 'wb') as fid:
@@ -530,27 +534,29 @@ class pascal_voc(imdb):
         # print '{} mcg roidb loaded from {}'.format(self.name, cache_file)
         # return roidb
 
-        if cfg.WSL and not cfg.USE_PSEUDO:
+        if cfg.WSL:
+            assert ('USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO)
             # WSL train and test
             roidb = self._load_mcg_roidb(None)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'trainval' in self.name:
-            # WSL fast rcnn train
-            pseudo_gt_roidb = self.pseudo_gt_roidb()
-            mcg_roidb = self._load_mcg_roidb(pseudo_gt_roidb)
-            roidb = imdb.merge_roidbs(pseudo_gt_roidb, mcg_roidb)
-        elif not cfg.WSL and cfg.USE_PSEUDO and 'test' in self.name:
-            # WSL fast rcnn test
-            roidb = self._load_mcg_roidb(None)
-        elif not cfg.WSL and not cfg.USE_PSEUDO:
-            # Fast rcnn train and test
-            if (int(self._year) == 2007 or self._image_set != 'test'):
-                gt_roidb = self.gt_roidb()
-                mcg_roidb = self._load_mcg_roidb(gt_roidb)
-                roidb = imdb.merge_roidbs(gt_roidb, mcg_roidb)
-            else:
-                roidb = self._load_mcg_roidb(None)
         else:
-            raise Exception('Not implement mode.')
+            if 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
+                # WSL fast rcnn train
+                pseudo_gt_roidb = self.pseudo_gt_roidb()
+                mcg_roidb = self._load_mcg_roidb(pseudo_gt_roidb)
+                roidb = imdb.merge_roidbs(pseudo_gt_roidb, mcg_roidb)
+            elif 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'test' in self.name:
+                # WSL fast rcnn test
+                roidb = self._load_mcg_roidb(None)
+            elif 'USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO:
+                # Fast rcnn train and test
+                if (int(self._year) == 2007 or self._image_set != 'test'):
+                    gt_roidb = self.gt_roidb()
+                    mcg_roidb = self._load_mcg_roidb(gt_roidb)
+                    roidb = imdb.merge_roidbs(gt_roidb, mcg_roidb)
+                else:
+                    roidb = self._load_mcg_roidb(None)
+            else:
+                raise Exception('Not implement mode.')
 
         if cfg.GENERATE_ROI:
             gt_roidb = self.gt_roidb()
