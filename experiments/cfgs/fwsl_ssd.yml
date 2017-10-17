@@ -7,8 +7,8 @@ TRAIN:
         PROPOSAL_METHOD: pseudo_gt
         ASPECT_GROUPING: False
 
-        USE_EXPAND: False
-        USE_SAMPLE: False
+        USE_EXPAND: True
+        USE_SAMPLE: True
         USE_CROP: False
 
 TEST:
