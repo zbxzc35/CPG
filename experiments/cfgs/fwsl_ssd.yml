@@ -4,7 +4,7 @@ TRAIN:
         ROIS_PER_IM: 2048
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
-        PROPOSAL_METHOD: mcg
+        PROPOSAL_METHOD: pseudo_gt
         ASPECT_GROUPING: False
 
         USE_EXPAND: False
@@ -21,5 +21,5 @@ RESIZE_MODE: 'FIT_SMALLEST'
 DEDUP_BOXES: 0.0
 RNG_SEED: 6
 EXP_DIR: fwsl/ssd
-USE_ROI_SCORE: True
-WSL: True
+USE_ROI_SCORE: False
+WSL: False
