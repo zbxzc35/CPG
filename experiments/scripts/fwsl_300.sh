@@ -132,7 +132,8 @@ time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
 	--iters ${ITERS} \
 	--cfg experiments/cfgs/fwsl_ssd.yml \
 	${EXTRA_ARGS} \
-	TRAIN.PROPOSAL_METHOD pseudo_gt \
+	TRAIN.SCALES [300] \
+	TEST.SCALES [300] \
 	TRAIN.PSEUDO_PATH output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
 
 #=========================================================================
