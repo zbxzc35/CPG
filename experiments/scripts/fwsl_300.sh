@@ -39,7 +39,6 @@ case $DATASET in
 		TEST_IMDB="voc_2007_test"
 		PT_DIR="pascal_voc"
 		ITERS=30
-		ITERS2=200
 		;;
 	pascal_voc10)
 		TRAIN_IMDB="voc_2010_trainval"

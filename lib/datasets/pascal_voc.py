@@ -664,7 +664,6 @@ class pascal_voc(imdb):
                 print '{:d} / {:d}'.format(i + 1, len(self._image_index))
 
             img_size = PIL.Image.open(self.image_path_at(i)).size
-            print index, img_size
 
             box_file = os.path.join(
                 cfg.DATA_DIR,

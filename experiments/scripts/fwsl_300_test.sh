@@ -86,7 +86,7 @@ time ./tools/fwsl/test_net.py --gpu ${GPU_ID} \
 	--def output/${EXP_DIR}/FWSL_score/deploy.prototxt \
 	--net ${NET_FINAL} \
 	--imdb ${TEST_IMDB} \
-	--cfg experiments/cfgs/fwsl.yml \
+	--cfg experiments/cfgs/fwsl_fwsl.yml \
 	${EXTRA_ARGS} \
 	EXP_DIR ${EXP_DIR}/FWSL_score \
 	TRAIN.SCALES [300] \
