@@ -115,6 +115,9 @@ __C.TRAIN.PASS_IM = 0
 
 __C.TRAIN.SHUFFLE = True
 
+__C.TRAIN.GAN_STEP = 0.0
+__C.TRAIN.GAN_imdb_name = ''
+
 #
 # Testing options
 #

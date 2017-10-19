@@ -66,6 +66,11 @@ class RoIDataLayer(caffe.Layer):
         self._roidb = roidb
         self._shuffle_roidb_inds()
         if cfg.TRAIN.USE_PREFETCH:
+            if hasattr(self, '_prefetch_process'):
+                print 'deleting old _prefetch_process'
+                self._prefetch_process.terminate()
+                self._prefetch_process.join()
+
             self._blob_queue = Queue(1280)
             self._prefetch_process = BlobFetcher(self._blob_queue, self._roidb,
                                                  self._num_classes)
