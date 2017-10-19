@@ -14,4 +14,4 @@ snapshot: 0
 snapshot_prefix: "VGG16"
 #debug_info: true
 
-iter_size: 32
+iter_size: 128
