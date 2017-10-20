@@ -54,10 +54,9 @@ class SolverWrapper(object):
         self.train_ims_num = len(roidb)
         print 'self.train_ims_num: ', self.train_ims_num
 
-        self.gan_step = max(
-            1,
-            int(1.0* (cfg.TRAIN.GAN_STEP * self.train_ims_num) /
-                (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH)))
+        self.gan_step = int(
+            1.0 * (cfg.TRAIN.GAN_STEP * self.train_ims_num) /
+            (self.solver_param.iter_size * cfg.TRAIN.IMS_PER_BATCH))
         print 'self.gan_step: ', self.gan_step
 
     def snapshot(self):

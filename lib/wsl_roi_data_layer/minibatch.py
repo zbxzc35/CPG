@@ -86,9 +86,9 @@ def get_minibatch(roidb, num_classes):
         # vis(img, roi, show_name='sample')
 
         # crop_bbox is define as RoIs with form (x1,y1,x2,y2)
-        if cfg.TRAIN.USE_CROP:
-            img, crop_bbox = utils.im_transforms.ApplyCrop(img)
-            roi = _project_im_rois(roi, crop_bbox)
+        # if cfg.TRAIN.USE_CROP:
+            # img, crop_bbox = utils.im_transforms.ApplyCrop(img)
+            # roi = _project_im_rois(roi, crop_bbox)
         # vis(img, roi, show_name='crop')
 
         #-------------------------------------------------------------

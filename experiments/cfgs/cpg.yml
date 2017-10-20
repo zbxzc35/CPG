@@ -3,6 +3,7 @@ TRAIN:
         MAX_SIZE: 2000
         IMS_PER_BATCH: 1
         ROIS_PER_IM: 2048
+        USE_CROP: True
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
         PROPOSAL_METHOD: mcg

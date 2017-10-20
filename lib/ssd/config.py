@@ -26,8 +26,9 @@ __C.TRAIN.MAX_SIZE = 1000
 # If image per Batch lagerer than 64, blob will exceed INT_MAX.
 __C.TRAIN.IMS_PER_BATCH = 2
 
+# TODO(YH): BATCH_SIZE is determined by IM_PER_BATCH and iter_size
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 128
+# __C.TRAIN.BATCH_SIZE = 128
 
 __C.TRAIN.ROIS_PER_IM = 10000
 
@@ -197,6 +198,9 @@ __C.TRAIN.SHUFFLE = True
 
 __C.TRAIN.USE_PSEUDO = False
 __C.TRAIN.PSEUDO_PATH = 'data/VOC2007/noise/'
+
+__C.TRAIN.GAN_STEP = 0.0
+__C.TRAIN.GAN_imdb_name = ''
 
 #
 # Testing options
