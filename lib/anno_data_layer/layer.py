@@ -63,10 +63,12 @@ class AnnotatedDataLayer(caffe.Layer):
         self._roidb = roidb
         self._shuffle_roidb_inds()
         if cfg.TRAIN.USE_PREFETCH:
-            if hasattr(self, '_prefetch_process'):
-                print 'Terminating old _prefetch_process'
+            try:
+                print 'Trying to terminating old _prefetch_process'
                 self._prefetch_process.terminate()
                 self._prefetch_process.join()
+            except Exception, e:
+                print Exception, ":", e
 
             self._blob_queue = Queue(1280)
             self._prefetch_process = BlobFetcher(self._blob_queue, self._roidb,
@@ -114,7 +116,7 @@ class AnnotatedDataLayer(caffe.Layer):
         blobs = self._get_next_minibatch()
 
         if False:
-        # if True:
+            # if True:
             vis_minibatch(
                 blobs['data'].copy(),
                 blobs['label'].copy(),

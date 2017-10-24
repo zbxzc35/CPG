@@ -39,6 +39,7 @@ class RoIDataLayer(caffe.Layer):
         else:
             self._perm = np.random.permutation(np.arange(len(self._roidb)))
         self._cur = 0
+        self._prefetch_process = None
 
     def _get_next_minibatch_inds(self):
         """Return the roidb indices for the next minibatch."""
@@ -67,10 +68,12 @@ class RoIDataLayer(caffe.Layer):
         self._roidb = roidb
         self._shuffle_roidb_inds()
         if cfg.TRAIN.USE_PREFETCH:
-            if hasattr(self, '_prefetch_process'):
-                print 'Terminating old _prefetch_process'
+            try:
+                print 'Trying to terminating old _prefetch_process'
                 self._prefetch_process.terminate()
                 self._prefetch_process.join()
+            except Exception, e:
+                print Exception, ":", e
 
             self._blob_queue = Queue(1280)
             self._prefetch_process = BlobFetcher(self._blob_queue, self._roidb,
