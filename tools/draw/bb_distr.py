@@ -141,6 +141,7 @@ if __name__ == '__main__':
     print '{:d} roidb entries'.format(len(roidb))
 
     max_try = 1000
+    max_show_per = 30
     max_show = 30
     for i in xrange(len(roidb)):
         print roidb[i]
@@ -152,6 +153,8 @@ if __name__ == '__main__':
         bboxes = []
         ovs = []
         for j in xrange(len(rois)):
+            if j >= max_show:
+                break
             roi = rois[j]
             x1 = int(roi[0])
             y1 = int(roi[1])
@@ -161,7 +164,7 @@ if __name__ == '__main__':
 
             suc_try = 0
             all_try = 0
-            while True:
+            while all_try >= max_try or suc_try >= max_show_per:
                 # cx = np.random.normal(1.0 * (x1 + x2) / 2, width_img)
                 # cy = np.random.normal(1.0 * (y1 + y2) / 2, height_img)
                 cx = np.random.normal(1.0 * (x1 + x2) / 2, 1)
@@ -199,10 +202,7 @@ if __name__ == '__main__':
                 # else:
                 # cv2.rectangle(img, (xx1, yy1), (xx2, yy2), (255, 0, 0), 1)
                 all_try = all_try + 1
-                if suc_try > max_try:
-                    break
-                if suc_try > max_show:
-                    break
+
         idx_sort = sorted(range(len(ovs)), key=lambda k: ovs[k])
         for j in xrange(len(idx_sort)):
             idx = idx_sort[j]
@@ -213,6 +213,8 @@ if __name__ == '__main__':
             cv2.rectangle(img, (x1, y1), (x2, y2), gray2jet(ovs[idx]), 1)
 
         for j in xrange(len(rois)):
+            if j >= max_show:
+                break
             roi = rois[j]
             x1 = int(roi[0])
             y1 = int(roi[1])
