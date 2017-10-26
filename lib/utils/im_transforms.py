@@ -65,9 +65,23 @@ def SampleBBox(sampler, img_shape):
     h_off = h_off * img_shape[0]
     w_off = w_off * img_shape[1]
 
+    assert bbox_width > 0
+    assert bbox_height > 0
+
     sampled_bbox = np.array(
-        [w_off, h_off, w_off + bbox_width - 1, h_off + bbox_height - 1],
+        [w_off, h_off, w_off + bbox_width, h_off + bbox_height],
         dtype=np.uint16)
+
+    sampled_bbox[0] = min(max(sampled_bbox[0], 0), img_shape[1] - 1)
+    sampled_bbox[1] = min(max(sampled_bbox[1], 0), img_shape[0] - 1)
+    sampled_bbox[2] = min(
+        max(sampled_bbox[2], sampled_bbox[0]), img_shape[1] - 1)
+    sampled_bbox[3] = min(
+        max(sampled_bbox[3], sampled_bbox[1]), img_shape[0] - 1)
+
+    assert sampled_bbox[0] <= sampled_bbox[2]
+    assert sampled_bbox[1] <= sampled_bbox[3]
+
     return sampled_bbox
 
 

@@ -12,21 +12,20 @@ import cv2
 import numpy as np
 import math
 from easydict import EasyDict as edict
-import utils
+import utils.im_transforms
 
 
 def random_sample(height, width):
     sampler = edict()
     sampler.max_scale = 1.0
-    sampler.min_scale = 0.0
+    sampler.min_scale = 0.1
     sampler.max_aspect_ratio = 10.0
     sampler.min_aspect_ratio = 0.1
     box = utils.im_transforms.SampleBBox(sampler, [height, width])
-    return box[0], box[1], box[2], box[3]
+    return box[0] + 1, box[1] + 1, box[2] + 1, box[3] + 1
 
 
 def random_sift(xmin, ymin, xmax, ymax, height, width):
-
     h = 1.0 * (ymax - ymin + 1)
     w = 1.0 * (xmax - xmin + 1)
     yctr = ymin + h / 2.0
@@ -62,6 +61,8 @@ def random_sift(xmin, ymin, xmax, ymax, height, width):
     assert xmin < xmax
     assert ymax <= height
     assert xmax <= width
+
+    return xmin, ymin, xmax, ymax
 
 
 if __name__ == "__main__":
@@ -145,9 +146,9 @@ if __name__ == "__main__":
                     ymax = int(v2.find('ymax').text)
                     print xmin, ymin, xmax, ymax
 
-                    xmin, ymin, xmax, ymax = random_sift(
-                        xmin, ymin, xmax, ymax, height, width)
-                    # xmin, ymin, xmax, ymax = random_sample(height, width)
+                    # xmin, ymin, xmax, ymax = random_sift(
+                    # xmin, ymin, xmax, ymax, height, width)
+                    xmin, ymin, xmax, ymax = random_sample(height, width)
 
                     v2.find('xmin').text = str(xmin)
                     v2.find('ymin').text = str(ymin)
