@@ -78,6 +78,9 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.GAN_STEP = 0.0
 __C.TRAIN.GAN_imdb_name = ''
 
+__C.TRAIN.USE_FEEDBACK = False
+__C.TRAIN.FEEDBACK_DIR = ''
+
 #
 # Testing options
 #

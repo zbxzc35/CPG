@@ -547,8 +547,9 @@ VGGNetBody(
     fully_conv=True,
     reduced=True,
     dilated=True,
-    dropout=False,
-    freeze_layers=freeze_layers)
+    dropout=False)
+    # dropout=False,
+    # freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 
@@ -602,8 +603,9 @@ VGGNetBody(
     fully_conv=True,
     reduced=True,
     dilated=True,
-    dropout=False,
-    freeze_layers=freeze_layers)
+    dropout=False)
+    # dropout=False,
+    # freeze_layers=freeze_layers)
 
 AddExtraLayers(net, use_batchnorm, lr_mult=lr_mult)
 

@@ -544,6 +544,10 @@ class pascal_voc(imdb):
             assert ('USE_PSEUDO' not in cfg.TRAIN or not cfg.TRAIN.USE_PSEUDO)
             # WSL train and test
             roidb = self._load_mcg_roidb(None)
+            if cfg.TRAIN.USE_FEEDBACK:
+                roidb_fd = _feedback_roidb(None)
+                roidb = imdb.merge_roidbs(roidb, roidb_fd)
+
         else:
             if 'USE_PSEUDO' in cfg.TRAIN and cfg.TRAIN.USE_PSEUDO and 'trainval' in self.name:
                 # WSL fast rcnn train
@@ -573,6 +577,43 @@ class pascal_voc(imdb):
         # print 'wrote ss roidb to {}'.format(cache_file)
 
         return roidb
+
+    def _feedback_roidb(self, gt_roidb):
+        result_dir = cfg.TRAIN.FEEDBACK_DIR
+
+        all_lines = []
+        for dirpath, dirnames, filename in os.walk(result_dir):
+            result_path = os.path.join(dirpath, filename)
+            print 'Loading thing from ', result_path
+
+            with open(result_path, 'r') as f:
+                all_lines.append(f.readlines())
+
+        box_list = []
+        score_list = []
+        for im_i, ix in enumerate(self._image_index):
+            if im_i % 1000 == 0:
+                print '{:d} / {:d}'.format(im_i + 1, self.num_images)
+
+            boxes = []
+            scores = []
+            for lines in all_lines:
+                for line in lines:
+                    line = line.strip()
+                    im_id, xmin, ymin, xmax, ymax = line.split(' ')
+
+                    # TODO(YH): should we minus one ?
+                    if im_id == ix:
+                        box = [xmin, ymin, xmax, ymax]
+                        boxes.append(box)
+                        scores.append(0.0)
+
+            boxes = np.array(boxes)
+            scores = np.array(scores)
+            box_list.append(boxes)
+            score_list.append(scores)
+
+        return self.create_roidb_from_box_list(box_list, gt_roidb, score_list)
 
     def _general_roidb(self, gt_roidb):
         roidb = []
