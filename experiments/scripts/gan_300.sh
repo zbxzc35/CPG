@@ -69,81 +69,85 @@ git log -1
 git submodule foreach 'git log -1'
 echo ---------------------------------------------------------------------
 
-##=========================================================================
-##第一步
-#echo ---------------------------------------------------------------------
-#echo showing the solver file:
-#cat "models/${PT_DIR}/${NET}/cpg/solver.prototxt"
-#echo ---------------------------------------------------------------------
-#time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-	#--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
-	#--weights data/imagenet_models/${NET}.v2.caffemodel \
-	#--imdb ${TRAIN_IMDB} \
-	#--iters ${ITERS} \
-	#--cfg experiments/cfgs/cpg.yml \
-	#${EXTRA_ARGS} \
-	#EXP_DIR ${EXP_DIR}/cpg
 
-##--------------------------------------------------------------------------
-#set +x
-#NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
-#set -x
+for step in {0..10}
+do
 
-#time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-	#--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-	#--net ${NET_FINAL} \
-	#--imdb ${TEST_IMDB} \
-	#--cfg experiments/cfgs/cpg.yml \
-	#${EXTRA_ARGS} \
-	#EXP_DIR ${EXP_DIR}/cpg
+	echo "----------------------------------------------------------------------------"
+	echo "current step: ${step}"
 
-#time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
-	#--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-	#--net ${NET_FINAL} \
-	#--imdb ${TRAIN_IMDB} \
-	#--cfg experiments/cfgs/cpg.yml \
-	#${EXTRA_ARGS} \
-	#EXP_DIR ${EXP_DIR}/cpg 
+	echo ---------------------------------------------------------------------
+	echo showing the solver file:
+	cat "models/${PT_DIR}/${NET}/cpg/solver.prototxt"
+	echo ---------------------------------------------------------------------
+	if [ step = 0  ]
+	then
+		weights=data/imagenet_models/${NET}.v2.caffemodel
 
-#=========================================================================
-#第二步
-python ./tools/gan/ssd_pascalvoc07.py ${EXP_DIR}/ssd
+		use_feedback=False
+		feedback_dir=""
+	else
+		weights=output/${EXP_DIR}/cpg/$((${step}-1))/${TRAIN_IMDB}/VGG16_iter_30.caffemodel
 
-echo ---------------------------------------------------------------------
-echo showing the solver file:
-cat "output/${EXP_DIR}/ssd/solver.prototxt"
-echo ---------------------------------------------------------------------
-time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
-	--solver output/${EXP_DIR}/ssd/solver.prototxt \
-	--weights data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel \
-	--imdb ${TRAIN_IMDB} \
-	--iters ${ITERS} \
-	--cfg experiments/cfgs/gan_ssd_300.yml \
-	${EXTRA_ARGS} \
-	TRAIN.PSEUDO_PATH output/${EXP_DIR}/cpg/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
+		use_feedback=True
+		feedback_dir=/home/shenyunhang/data/VOCdevkit/results/VOC2007/${EXP_DIR}/ssd/$((${step}-1))_score/Main
+	fi
 
-exit
-#=========================================================================
-#第三步
-python ./tools/fwsl/fwsl_pascalvoc07.py ${EXP_DIR}/gan
+	time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
+		--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
+		--weights ${weights} \
+		--imdb ${TRAIN_IMDB} \
+		--iters ${ITERS} \
+		--cfg experiments/cfgs/cpg.yml \
+		${EXTRA_ARGS} \
+		EXP_DIR ${EXP_DIR}/cpg/${step} \
+		TRAIN.USE_FEEDBACK use_feedback \
+		TRAIN.FEEDBACK_DIR feedback_dir
 
-./tools/fwsl/fc6fc7_to_wsl.py \
-	models/${PT_DIR}/${NET}/cpg/test.prototxt \
-	output/${EXP_DIR}//${TRAIN_IMDB}/VGG16_iter_30.caffemodel \
-	models/${PT_DIR}/${NET}/cpg/train_wsl.prototxt \
-	output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_wsl.caffemodel
+	#--------------------------------------------------------------------------
+	set +x
+	NET_FINAL=`grep -B 1 "done solving" ${LOG} |tail -n 2 | grep "Wrote snapshot" | awk '{print $4}'`
+	set -x
+
+	time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
+		--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+		--net ${NET_FINAL} \
+		--imdb ${TEST_IMDB} \
+		--cfg experiments/cfgs/cpg.yml \
+		${EXTRA_ARGS} \
+		EXP_DIR ${EXP_DIR}/cpg/${step}
+
+	time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
+		--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
+		--net ${NET_FINAL} \
+		--imdb ${TRAIN_IMDB} \
+		--cfg experiments/cfgs/cpg.yml \
+		${EXTRA_ARGS} \
+		EXP_DIR ${EXP_DIR}/cpg/${step}
 
 
-NET_FINAL=output/${EXP_DIR}/CPG/${TRAIN_IMDB}/VGG16_iter_30_wsl.caffemodel,output/${EXP_DIR}/SSD/VGG_VOC2007_iter_80000.caffemodel
+	python ./tools/gan/ssd_voc07_300.py ${EXP_DIR}/ssd/${step}
 
+	if [ step = 0  ]
+	then
+		weights=data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel
+	else
+		weights=output/${EXP_DIR}/ssd/$((${step}-1))/${TRAIN_IMDB}/VGG_VOC2007_iter_80000.caffemodel
+	fi
 
-time ./tools/fwsl/train_net.py --gpu ${GPU_ID} \
-	--solver output/${EXP_DIR}/FWSL/solver.prototxt \
-	--weights ${NET_FINAL} \
-	--imdb ${TRAIN_IMDB} \
-	--iters ${ITERS} \
-	--cfg experiments/cfgs/fwsl_fwsl.yml \
-	${EXTRA_ARGS} \
-	EXP_DIR ${EXP_DIR}/FWSL \
-	TRAIN.SCALES [300] \
-	TEST.SCALES [300]
+	echo ---------------------------------------------------------------------
+	echo showing the solver file:
+	cat "output/${EXP_DIR}/ssd/${step}/solver.prototxt"
+	echo ---------------------------------------------------------------------
+	time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
+		--solver output/${EXP_DIR}/ssd/${step}/solver.prototxt \
+		--weights ${weights} \
+		--imdb ${TRAIN_IMDB} \
+		--iters ${ITERS} \
+		--cfg experiments/cfgs/gan_ssd_300.yml \
+		${EXTRA_ARGS} \
+		TRAIN.PSEUDO_PATH output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/VGG16_iter_30/detections_o.pkl
+
+	python ./tools/gan/score_ssd_voc07_300.py ${EXP_DIR}/ssd/${step}
+
+done

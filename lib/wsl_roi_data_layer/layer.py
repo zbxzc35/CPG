@@ -196,6 +196,8 @@ class BlobFetcher(Process):
         self._num_classes = num_classes
         self._perm = None
         self._cur = 0
+        # fix the random seed for reproducibility
+        np.random.seed(cfg.RNG_SEED)
 
         self._shuffle_roidb_inds()
 

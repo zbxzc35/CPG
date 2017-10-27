@@ -27,9 +27,9 @@ for subset in trainval test
 do
 	if [ $subset == "trainval" ]
 	then
-		python $root_dir/tools/ssd/generate_noise_gt.py $data_root_dir $root_dir/data/$dataset_name/$subset.txt $root_dir/data/$dataset_name/noise/Annotations
-		python $root_dir/tools/ssd/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $root_dir/data/$dataset_name/noise_$subset.txt $root_dir/data/$dataset_name/$db/$dataset_name"_"$subset"_"$db
+		python $root_dir/tools/ssd/generate_noise_gt.py $data_root_dir $root_dir/data/$dataset_name/$subset.txt $root_dir/data/$dataset_name/noise_Annotations
+		python $root_dir/tools/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $root_dir/data/$dataset_name/noise_$subset.txt $root_dir/data/$dataset_name/$db/$dataset_name"_"$subset"_"$db
 	else
-		python $root_dir/tools/ssd/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $root_dir/data/$dataset_name/$subset.txt $root_dir/data/$dataset_name/$db/$dataset_name"_"$subset"_"$db
+		python $root_dir/tools/create_annoset.py --anno-type=$anno_type --label-map-file=$mapfile --min-dim=$min_dim --max-dim=$max_dim --resize-width=$width --resize-height=$height --check-label $extra_cmd $data_root_dir $root_dir/data/$dataset_name/$subset.txt $root_dir/data/$dataset_name/$db/$dataset_name"_"$subset"_"$db
 	fi
 done
