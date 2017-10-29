@@ -78,8 +78,6 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.GAN_STEP = 0.0
 __C.TRAIN.GAN_imdb_name = ''
 
-__C.TRAIN.USE_FEEDBACK = False
-__C.TRAIN.FEEDBACK_DIR = ''
 
 #
 # Testing options
@@ -173,6 +171,10 @@ __C.USE_BG = False
 __C.SPATIAL_SCALE = 1. / 16.
 
 __C.RESIZE_MODE = 'FIT_SMALLEST'
+
+__C.USE_FEEDBACK = False
+__C.FEEDBACK_DIR = ''
+__C.FEEDBACK_NUM = 0
 
 
 def get_vis_dir(imdb, net=None):

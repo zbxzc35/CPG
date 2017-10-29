@@ -116,7 +116,7 @@ class AnnotatedDataLayer(caffe.Layer):
         blobs = self._get_next_minibatch()
 
         if False:
-            # if True:
+        # if True:
             vis_minibatch(
                 blobs['data'].copy(),
                 blobs['label'].copy(),

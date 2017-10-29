@@ -126,7 +126,7 @@ layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "ro
 	top: "cpg_roi_select"
 	top: "labels_pos" top: "labels_neg"
 	cpg_param { is_cpg: true mode: CPG_POOLING is_order: false is_contrast: false debug_info: false
-        max_num_im_cpg: 100220, ignore_label: 20
+        max_num_im_cpg: 100220 ignore_label: 20
 	cpg_blob_name: "data"
 	#cpg_blob_name: "conv1_2"
 	#cpg_blob_name: "conv2_2"

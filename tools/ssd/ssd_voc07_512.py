@@ -450,7 +450,7 @@ gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
 # Divide the mini-batch to different GPUs.
-batch_size = 32
+batch_size = 8
 accum_batch_size = 32
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
@@ -550,13 +550,13 @@ make_if_not_exist(snapshot_dir)
 # Create train net.
 net = caffe.NetSpec()
 # net.data, net.label = CreateAnnotatedDataLayer(
-    # train_data,
-    # batch_size=batch_size_per_device,
-    # train=True,
-    # output_label=True,
-    # label_map_file=label_map_file,
-    # transform_param=train_transform_param,
-    # batch_sampler=batch_sampler)
+# train_data,
+# batch_size=batch_size_per_device,
+# train=True,
+# output_label=True,
+# label_map_file=label_map_file,
+# transform_param=train_transform_param,
+# batch_sampler=batch_sampler)
 net.data, net.label = L.Python(
     ntop=2,
     module='anno_data_layer.layer',

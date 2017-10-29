@@ -214,7 +214,7 @@ def vis(img,
 
     im = im.transpose(channel_swap)
 
-    im += pixel_means
+    im += pixel_means.astype(im.dtype)
     im = im.astype(np.uint8).copy()
 
     height = im.shape[0]

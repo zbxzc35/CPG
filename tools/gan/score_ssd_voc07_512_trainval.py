@@ -18,11 +18,11 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
     use_relu = True
 
     # Add additional convolutional layers.
-    # 19 x 19
+    # 32 x 32
     from_layer = net.keys()[-1]
 
     # TODO(weiliu89): Construct the name using the last layer to avoid duplication.
-    # 10 x 10
+    # 16 x 16
     out_layer = "conv6_1"
     ConvBNLayer(
         net,
@@ -50,7 +50,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         2,
         lr_mult=lr_mult)
 
-    # 5 x 5
+    # 8 x 8
     from_layer = out_layer
     out_layer = "conv7_1"
     ConvBNLayer(
@@ -79,7 +79,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         2,
         lr_mult=lr_mult)
 
-    # 3 x 3
+    # 4 x 4
     from_layer = out_layer
     out_layer = "conv8_1"
     ConvBNLayer(
@@ -104,11 +104,11 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         use_relu,
         256,
         3,
-        0,
         1,
+        2,
         lr_mult=lr_mult)
 
-    # 1 x 1
+    # 2 x 2
     from_layer = out_layer
     out_layer = "conv9_1"
     ConvBNLayer(
@@ -133,7 +133,36 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         use_relu,
         256,
         3,
+        1,
+        2,
+        lr_mult=lr_mult)
+
+    # 1 x 1
+    from_layer = out_layer
+    out_layer = "conv10_1"
+    ConvBNLayer(
+        net,
+        from_layer,
+        out_layer,
+        use_batchnorm,
+        use_relu,
+        128,
+        1,
         0,
+        1,
+        lr_mult=lr_mult)
+
+    from_layer = out_layer
+    out_layer = "conv10_2"
+    ConvBNLayer(
+        net,
+        from_layer,
+        out_layer,
+        use_batchnorm,
+        use_relu,
+        256,
+        4,
+        1,
         1,
         lr_mult=lr_mult)
 
@@ -152,12 +181,12 @@ caffe_root = os.getcwd()
 run_soon = True
 
 # The database file for training data. Created by data/VOC2007/create_data.sh
-train_data = "data/VOC2007/lmdb/VOC2007_trainval_lmdb"
+train_data = "data/VOC2007/lmdb/VOC2007_test_lmdb"
 # The database file for testing data. Created by data/VOC2007/create_data.sh
-test_data = "data/VOC2007/lmdb/VOC2007_test_lmdb"
+test_data = "data/VOC2007/lmdb/VOC2007_trainval_lmdb"
 # Specify the batch sampler.
-resize_width = 300
-resize_height = 300
+resize_width = 512
+resize_height = 512
 resize = "{}x{}".format(resize_width, resize_height)
 batch_sampler = [
     {
@@ -315,13 +344,13 @@ job_name = sys.argv[1]
 model_name = "VGG_VOC2007"
 
 # Directory which stores the model .prototxt file.
-save_dir = "output/{}_score".format(job_name)
+save_dir = "output/{}_score_trainval".format(job_name)
 # Directory which stores the snapshot of trained models.
 snapshot_dir = "output/{}".format(job_name)
 # Directory which stores the job script and log file.
-job_dir = "experiments/logs/{}_score".format(job_name)
+job_dir = "experiments/logs/{}_score_trainval".format(job_name)
 # Directory which stores the detection results.
-output_result_dir = "{}/data/VOCdevkit/results/VOC2007/{}_score/Main".format(
+output_result_dir = "{}/data/VOCdevkit/results/VOC2007/{}_score_trainval/Main".format(
     os.environ['HOME'], job_name)
 
 # model definition files.
@@ -336,11 +365,9 @@ job_file = "{}/{}.sh".format(job_dir, model_name)
 
 # Find most recent snapshot.
 max_iter = 0
-print(snapshot_dir)
 for file in os.listdir(snapshot_dir):
     if file.endswith(".caffemodel"):
         basename = os.path.splitext(file)[0]
-        print(basename)
         iter = int(basename.split("{}_iter_".format(model_name))[1])
         if iter > max_iter:
             max_iter = iter
@@ -350,7 +377,7 @@ if max_iter == 0:
     sys.exit()
 
 # Stores the test image names and sizes. Created by data/VOC2007/create_list.sh
-name_size_file = "data/VOC2007/test_name_size.txt"
+name_size_file = "data/VOC2007/trainval_name_size.txt"
 # The resume model.
 pretrain_model = "{}_iter_{}.caffemodel".format(snapshot_prefix, max_iter)
 # Stores LabelMapItem.
@@ -390,18 +417,19 @@ loss_param = {
 
 # parameters for generating priors.
 # minimum dimension of input image
-min_dim = 300
-# conv4_3 ==> 38 x 38
-# fc7 ==> 19 x 19
-# conv6_2 ==> 10 x 10
-# conv7_2 ==> 5 x 5
-# conv8_2 ==> 3 x 3
-# conv9_2 ==> 1 x 1
+min_dim = 512
+# conv4_3 ==> 64 x 64
+# fc7 ==> 32 x 32
+# conv6_2 ==> 16 x 16
+# conv7_2 ==> 8 x 8
+# conv8_2 ==> 4 x 4
+# conv9_2 ==> 2 x 2
+# conv10_2 ==> 1 x 1
 mbox_source_layers = [
-    'conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2'
+    'conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2', 'conv10_2'
 ]
 # in percent %
-min_ratio = 20
+min_ratio = 15
 max_ratio = 90
 step = int(math.floor((max_ratio - min_ratio) / (len(mbox_source_layers) - 2)))
 min_sizes = []
@@ -409,12 +437,12 @@ max_sizes = []
 for ratio in xrange(min_ratio, max_ratio + 1, step):
     min_sizes.append(min_dim * ratio / 100.)
     max_sizes.append(min_dim * (ratio + step) / 100.)
-min_sizes = [min_dim * 10 / 100.] + min_sizes
-max_sizes = [min_dim * 20 / 100.] + max_sizes
-steps = [8, 16, 32, 64, 100, 300]
-aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
+min_sizes = [min_dim * 7 / 100.] + min_sizes
+max_sizes = [min_dim * 15 / 100.] + max_sizes
+steps = [8, 16, 32, 64, 128, 256, 512]
+aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]]
 # L2 normalize conv4_3.
-normalizations = [20, -1, -1, -1, -1, -1]
+normalizations = [20, -1, -1, -1, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
     prior_variance = [0.1, 0.1, 0.2, 0.2]
@@ -425,7 +453,8 @@ clip = False
 
 # Solver parameters.
 # Defining which GPUs to use.
-gpus = "0"
+# gpus = "0"
+gpus = sys.argv[2]
 gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
@@ -454,10 +483,8 @@ elif normalization_mode == P.Loss.FULL:
     base_lr *= 2000.
 
 # Evaluate on whole test set.
-num_test_image = 4952
+num_test_image = 5011
 test_batch_size = 8
-# Ideally test_batch_size should be divisible by num_test_image,
-# otherwise mAP will be slightly off the true value.
 test_iter = int(math.ceil(float(num_test_image) / test_batch_size))
 
 solver_param = {
@@ -494,18 +521,18 @@ det_out_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k': 400
+        'top_k': 2048
     },
     'save_output_param': {
         'output_directory': output_result_dir,
-        'output_name_prefix': "comp4_det_test_",
+        'output_name_prefix': "comp4_det_trainval_",
         'output_format': "VOC",
         'label_map_file': label_map_file,
         'name_size_file': name_size_file,
         'num_test_image': num_test_image,
     },
-    'keep_top_k': 200,
-    'confidence_threshold': 0.01,
+    'keep_top_k': 2048,
+    'confidence_threshold': 0.0001,
     'code_type': code_type,
 }
 

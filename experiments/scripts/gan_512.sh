@@ -76,12 +76,6 @@ echo ---------------------------------------------------------------------
 start=false
 for step in {0..10}
 do
-	if [ ${step} == 1 ]
-	then
-		echo "###############################################################################"
-		echo "START POINT"
-		start=true
-	fi
 
 	echo "###############################################################################"
 	echo "current step: ${step}"
@@ -94,8 +88,8 @@ do
 		feedback_num=0
 	else
 		use_feedback=True
-		feedback_dir_test=/home/shenyunhang/data/VOCdevkit/results/VOC2007/${EXP_DIR}/ssd/$((${step}-1))_score_test_feedback/Main
-		feedback_dir_trainval=/home/shenyunhang/data/VOCdevkit/results/VOC2007/${EXP_DIR}/ssd/$((${step}-1))_score_trainval_feedback/Main
+		feedback_dir_test=/home/shenyunhang/data/VOCdevkit/results/VOC2007/${EXP_DIR}/ssd/$((${step}-1))_score_test/Main
+		feedback_dir_trainval=/home/shenyunhang/data/VOCdevkit/results/VOC2007/${EXP_DIR}/ssd/$((${step}-1))_score_trainval/Main
 		feedback_num=512
 	fi
 
@@ -141,6 +135,7 @@ do
 
 	fi
 
+
 	echo "###############################################################################"
 	echo "TEST F:"
 
@@ -160,10 +155,10 @@ do
 			FEEDBACK_DIR "${feedback_dir_test}" \
 			FEEDBACK_NUM ${feedback_num}
 
-		#use_feedback=False
-		#feedback_dir_test=""
-		#feedback_dir_trainval=""
-		#feedback_num=0
+		use_feedback=False
+		feedback_dir_test=""
+		feedback_dir_trainval=""
+		feedback_num=0
 
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
@@ -177,13 +172,20 @@ do
 			FEEDBACK_NUM ${feedback_num}
 	fi
 
+	if [ ${step} == 0 ]
+	then
+		echo "###############################################################################"
+		echo "START POINT"
+		start=true
+	fi
+
 
 	echo "###############################################################################"
 	echo "TRAIN G:"
 
 	if [ "$start" = true  ]
 	then
-		python ./tools/gan/ssd_voc07_300.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+		python ./tools/gan/ssd_voc07_512.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
 
 		if [ ${step} == 0  ]
 		then
@@ -202,7 +204,7 @@ do
 			--weights ${weights} \
 			--imdb ${TRAIN_IMDB} \
 			--iters ${ITERS} \
-			--cfg experiments/cfgs/gan_ssd_300.yml \
+			--cfg experiments/cfgs/gan_ssd_512.yml \
 			${EXTRA_ARGS} \
 			TRAIN.PSEUDO_PATH output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}/detections_o.pkl
 	fi
@@ -213,16 +215,9 @@ do
 
 	if [ "$start" = true  ]
 	then
-		python ./tools/gan/score_ssd_voc07_300_test_feedback.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-		python ./tools/gan/score_ssd_voc07_300_trainval_feedback.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-		python ./tools/gan/score_ssd_voc07_300_test.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-		python ./tools/gan/score_ssd_voc07_300_trainval.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-
-		dir_trainval=/home/shenyunhang/data/VOCdevkit/results/VOC2007/${EXP_DIR}/ssd/${step}_score_trainval/Main/
-		dir_eval=data/VOCdevkit2007/results/VOC2007/Main/
-		cp $dir_trainval/* $dir_eval
-		rename "s/comp4_det_/comp4_F_det_/g" ${dir_eval}/*
-		python tools/eval.py --salt F
+		python ./tools/gan/score_ssd_voc07_512.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+		python ./tools/gan/score_ssd_voc07_512_trainval.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+		python ./tools/gan/score_ssd_voc07_512_test.py ${EXP_DIR}/ssd/${step} "${GPU_ID}"
 	fi
 
 done

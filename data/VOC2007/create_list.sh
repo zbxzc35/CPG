@@ -45,7 +45,9 @@ do
 	if [ $dataset == "trainval" ]
 	then
 		rand_file=$dst_file.random
+		dst_file_nr=$bash_dir/${dataset}_norandom.txt
 		cat $dst_file | perl -MList::Util=shuffle -e 'print shuffle(<STDIN>);' > $rand_file
+		cp $dst_file $dst_file_nr
 		mv $rand_file $dst_file
 	fi
 done

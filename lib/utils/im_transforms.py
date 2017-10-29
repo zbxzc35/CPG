@@ -272,64 +272,64 @@ def ApplyDistort(in_img):
         # Do random brightness distortion.
         out_img = RandomBrightness(in_img, cfg.TRAIN.brightness_prob,
                                    cfg.TRAIN.brightness_delta)
-        # cv2.imshow('1',out_img.astype(np.uint8))
+        # cv2.imshow('0 RandomBrightness',out_img.astype(np.uint8))
 
         # Do random contrast distortion.
         out_img = RandomContrast(out_img, cfg.TRAIN.contrast_prob,
                                  cfg.TRAIN.contrast_lower,
                                  cfg.TRAIN.contrast_upper)
-        # cv2.imshow('2',out_img.astype(np.uint8))
+        # cv2.imshow('1 RandomContrast',out_img.astype(np.uint8))
 
         # Do random saturation distortion.
         out_img = RandomSaturation(out_img, cfg.TRAIN.saturation_prob,
                                    cfg.TRAIN.saturation_lower,
                                    cfg.TRAIN.saturation_upper)
-        # cv2.imshow('3',out_img.astype(np.uint8))
+        # cv2.imshow('2 RandomSaturation',out_img.astype(np.uint8))
 
         # Do random exposure distortion.
         out_img = RandomExposure(out_img, cfg.TRAIN.exposure_prob,
                                  cfg.TRAIN.exposure_lower,
                                  cfg.TRAIN.exposure_upper)
-        # cv2.imshow('4',out_img.astype(np.uint8))
+        # cv2.imshow('3 RandomExposure',out_img.astype(np.uint8))
 
         # Do random hue distortion.
         out_img = RandomHue(out_img, cfg.TRAIN.hue_prob, cfg.TRAIN.hue_delta)
-        # cv2.imshow('5',out_img.astype(np.uint8))
+        # cv2.imshow('4 RandomHue',out_img.astype(np.uint8))
 
         # Do random reordering of the channels.
         out_img = RandomOrderChannels(out_img, cfg.TRAIN.random_order_prob)
-        # cv2.imshow('6',out_img.astype(np.uint8))
+        # cv2.imshow('5 RandomOrderChannels',out_img.astype(np.uint8))
     else:
         # Do random brightness distortion.
         out_img = RandomBrightness(in_img, cfg.TRAIN.brightness_prob,
                                    cfg.TRAIN.brightness_delta)
-        # cv2.imshow('1',out_img.astype(np.uint8))
+        # cv2.imshow('0 RandomBrightness',out_img.astype(np.uint8))
 
         # Do random saturation distortion.
         out_img = RandomSaturation(out_img, cfg.TRAIN.saturation_prob,
                                    cfg.TRAIN.saturation_lower,
                                    cfg.TRAIN.saturation_upper)
-        # cv2.imshow('2',out_img.astype(np.uint8))
+        # cv2.imshow('1 RandomSaturation',out_img.astype(np.uint8))
 
         # Do random exposure distortion.
         out_img = RandomExposure(out_img, cfg.TRAIN.exposure_prob,
                                  cfg.TRAIN.exposure_lower,
                                  cfg.TRAIN.exposure_upper)
-        # cv2.imshow('3',out_img.astype(np.uint8))
+        # cv2.imshow('2 RandomExposure',out_img.astype(np.uint8))
 
         # Do random hue distortion.
         out_img = RandomHue(out_img, cfg.TRAIN.hue_prob, cfg.TRAIN.hue_delta)
-        # cv2.imshow('4',out_img.astype(np.uint8))
+        # cv2.imshow('3 RandomHue',out_img.astype(np.uint8))
 
         # Do random contrast distortion.
         out_img = RandomContrast(out_img, cfg.TRAIN.contrast_prob,
                                  cfg.TRAIN.contrast_lower,
                                  cfg.TRAIN.contrast_upper)
-        # cv2.imshow('5',out_img.astype(np.uint8))
+        # cv2.imshow('4 RandomContrast',out_img.astype(np.uint8))
 
         # Do random reordering of the channels.
         out_img = RandomOrderChannels(out_img, cfg.TRAIN.random_order_prob)
-        # cv2.imshow('6',out_img.astype(np.uint8))
+        # cv2.imshow('5 RandomOrderChannels',out_img.astype(np.uint8))
 
     return out_img
 
