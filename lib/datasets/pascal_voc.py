@@ -68,7 +68,7 @@ class pascal_voc(imdb):
         # Default to roidb handler
         self._roidb_handler = self.selective_search_roidb
         self._salt = str(uuid.uuid4())
-        self._comp_id = 'comp4'
+        self._comp_id = 'comp3'
         self._comp_id_cls = 'comp1'
 
         # PASCAL specific config options
@@ -87,8 +87,8 @@ class pascal_voc(imdb):
             'Path does not exist: {}'.format(self._data_path)
 
         # test split of PASCAL VOC >2007
-        if 'test' in self._name and int(self._year) > 2007:
-            return
+        # if 'test' in self._name and int(self._year) > 2007:
+            # return
 
         self._gt_classes = {
             ix: self._load_pascal_classes_annotation(ix)
@@ -125,8 +125,8 @@ class pascal_voc(imdb):
         print 'left image number:', len(self._image_index)
 
         # test split of PASCAL VOC >2007
-        if 'test' in self._name and int(self._year) > 2007:
-            return
+        # if 'test' in self._name and int(self._year) > 2007:
+            # return
 
         self._gt_classes = {
             ix: self._load_pascal_classes_annotation(ix)
@@ -269,13 +269,22 @@ class pascal_voc(imdb):
                 # if dets.shape[0] > 0:
                 # num_objs += 1
 
+                max_score = 0
+                num_objs_cls = 0
                 for i in range(dets.shape[0]):
                     det = dets[i]
 
                     score = det[4]
+                    if score > max_score:
+                        max_score = score
                     if score < threshold:
                         continue
                     num_objs += 1
+                    num_objs_cls += 1
+
+                if num_objs_cls == 0:
+                    if max_score > 0:
+                        num_objs += 1
 
             if num_objs == 0:
                 blacklist.append(ix)
@@ -297,6 +306,9 @@ class pascal_voc(imdb):
                 if dets.shape[0] <= 0:
                     continue
 
+                max_score = 0
+                max_score_bb = []
+                num_objs_cls = 0
                 for i in range(dets.shape[0]):
                     det = dets[i]
                     x1 = det[0]
@@ -305,8 +317,29 @@ class pascal_voc(imdb):
                     y2 = det[3]
 
                     score = det[4]
+                    if score > max_score:
+                        max_score = score
+                        max_score_bb = [x1, y1, x2, y2]
                     if score < threshold:
                         continue
+
+                    assert x1 >= 0
+                    assert y1 >= 0
+                    assert x2 >= x1
+                    assert y2 >= y1
+                    assert x2 < img_size[0]
+                    assert y2 < img_size[1]
+
+                    boxes[obj_i, :] = [x1, y1, x2, y2]
+                    gt_classes[obj_i] = cls
+                    overlaps[obj_i, cls] = 1.0
+                    seg_areas[obj_i] = (x2 - x1 + 1) * (y2 - y1 + 1)
+
+                    obj_i += 1
+                    num_objs_cls += 1
+
+                if num_objs_cls == 0:
+                    x1, y1, x2, y2 = max_score_bb[:]
 
                     assert x1 >= 0
                     assert y1 >= 0
@@ -655,9 +688,12 @@ class pascal_voc(imdb):
                     for line in f.readlines():
                         line = line.strip()
                         im_id, score, xmin, ymin, xmax, ymax = line.split(' ')
+
                         if not all_dets.has_key(im_id):
                             all_dets[im_id] = []
-                        all_dets[im_id].append([score, xmin, ymin, xmax, ymax])
+                        # all_dets[im_id].append([score, xmin, ymin, xmax, ymax])
+                        all_dets[im_id].append(
+                            [score, xmin, ymin, xmax, ymax, filename])
 
         box_list = []
         score_list = []
@@ -673,12 +709,28 @@ class pascal_voc(imdb):
 
             img_size = PIL.Image.open(self.image_path_at(im_i)).size
 
+            gt_cls = self._gt_classes[ix]
+            gt_cls_name = [
+                self._classes[i_c] for i_c in range(len(self._classes))
+                if gt_cls[i_c] == 1
+            ]
+
             boxes = []
             scores = []
             scores_ = []
             dets = all_dets[ix]
             for det in dets:
-                score, xmin, ymin, xmax, ymax = det[:]
+                # score, xmin, ymin, xmax, ymax = det[:]
+                score, xmin, ymin, xmax, ymax, filename = det[:]
+
+                # TODO(YH): should we keep all
+                # is_keep = False
+                # for cls in gt_cls_name:
+                # if cls in filename:
+                # is_keep = True
+                # if not is_keep:
+                # continue
+
                 xmin = max(0, int(xmin) - 1)
                 ymin = max(0, int(ymin) - 1)
                 xmax = min(img_size[0] - 1, int(xmax) - 1)

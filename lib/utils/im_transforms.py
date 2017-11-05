@@ -4,9 +4,12 @@ import math
 import numpy as np
 import numpy.random as npr
 import cv2
+from matplotlib.colors import rgb_to_hsv
+from matplotlib.colors import hsv_to_rgb
 from configure import cfg
 
 import utils.blob
+from caffe.io import resize_image
 
 
 def GenerateBatchSamples(roi, img_shape):
@@ -342,6 +345,20 @@ def convertTo(in_img, alpha, beta):
     return out_img
 
 
+def bgr_to_hsv(bgr):
+    b, g, r = cv2.split(bgr)
+    rgb = cv2.merge((r, g, b))
+    hsv = rgb_to_hsv(rgb)
+    return hsv
+
+
+def hsv_to_bgr(hsv):
+    rgb = hsv_to_rgb(hsv)
+    r, g, b = cv2.split(rgb)
+    bgr = cv2.merge((b, g, r))
+    return bgr
+
+
 def RandomBrightness(in_img, brightness_prob, brightness_delta):
     prob = npr.random()
     if prob < brightness_prob:
@@ -399,6 +416,7 @@ def AdjustExposure(in_img, delta):
     if abs(delta - 1.0) != 1e-3:
         # Convert to HSV colorspae.
         out_img = cv2.cvtColor(in_img, cv2.COLOR_BGR2HSV)
+        # out_img = bgr_to_hsv(in_img)
 
         # Split the image to 3 channels.
         h, s, v = cv2.split(out_img)
@@ -411,6 +429,7 @@ def AdjustExposure(in_img, delta):
 
         # Back to BGR colorspace.
         out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)
+        # out_img = hsv_to_bgr(out_img)
     else:
         out_img = in_img
     return out_img
@@ -432,6 +451,7 @@ def AdjustSaturation(in_img, delta):
     if abs(delta - 1.0) != 1e-3:
         # Convert to HSV colorspae.
         out_img = cv2.cvtColor(in_img, cv2.COLOR_BGR2HSV)
+        # out_img = bgr_to_hsv(in_img)
 
         # Split the image to 3 channels.
         h, s, v = cv2.split(out_img)
@@ -444,6 +464,7 @@ def AdjustSaturation(in_img, delta):
 
         # Back to BGR colorspace.
         out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)
+        # out_img = hsv_to_bgr(out_img)
     else:
         out_img = in_img
     return out_img
@@ -464,6 +485,7 @@ def AdjustHue(in_img, delta):
     if abs(delta) > 0:
         # Convert to HSV colorspae.
         out_img = cv2.cvtColor(in_img, cv2.COLOR_BGR2HSV)
+        # out_img = bgr_to_hsv(in_img)
 
         # Split the image to 3 channels.
         h, s, v = cv2.split(out_img)
@@ -476,6 +498,7 @@ def AdjustHue(in_img, delta):
 
         # Back to BGR colorspace.
         out_img = cv2.cvtColor(out_img, cv2.COLOR_HSV2BGR)
+        # out_img = hsv_to_bgr(out_img)
     else:
         out_img = in_img
     return out_img
@@ -521,6 +544,9 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
             print 'Unknow interp mode: ', interp_name
             exit(0)
 
+    if len(cfg.TRAIN.INTERP_MODEL) > 0:
+        interp_order = np.random.randint(0, 6)
+
     if cfg.RESIZE_MODE == 'WARP':
         im_scale_h = float(target_size) / float(im_shape[0])
         im_scale_w = float(target_size) / float(im_shape[1])
@@ -531,6 +557,8 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
             fx=im_scale_w,
             fy=im_scale_h,
             interpolation=interp_mode)
+        # im = resize_image(
+        # im, (target_size, target_size), interp_order=interp_order)
         im_scales = [im_scale_h, im_scale_w]
     elif cfg.RESIZE_MODE == 'FIT_SMALLEST':
         im_size_min = np.min(im_shape[0:2])
@@ -546,6 +574,9 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
             fx=im_scale,
             fy=im_scale,
             interpolation=interp_mode)
+        # im = resize_image(
+        # im, (im_shape[0] * im_scale, im_shape[1] * im_scale),
+        # interp_order=interp_order)
         im_scales = [im_scale, im_scale]
     else:
         print 'Unknow resize mode.'

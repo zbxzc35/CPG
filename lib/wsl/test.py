@@ -560,7 +560,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.000000001, vis=False):
             if vis:
                 # vis_heatmap(im, i, imdb.classes[j], cls_dets, thresh=0.3)
                 # vis_detections_highest(
-                    # im, imdb.classes[j], cls_dets, thresh=0.3)
+                # im, imdb.classes[j], cls_dets, thresh=0.3)
                 vis_detections(im, imdb.classes[j], cls_dets, thresh=0.03)
 
             all_boxes[j][i] = cls_dets
@@ -642,6 +642,120 @@ def test_net_ensemble(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
                 for n in xrange(num_images):
                     all_boxes_cache[c][n][:, 4] += all_boxes_cache_this[c][
                         n][:, 4]
+
+    print 'all_boxes_cache: ', len(all_boxes_cache), len(all_boxes_cache[0])
+    print 'all_boxes_cache[0][0]: ', all_boxes_cache[0][0].shape
+    # print 'all_boxes_cache[0][0][0]: ', all_boxes_cache[0][0][0]
+    # print 'all_boxes_cache[14][0]: ', all_boxes_cache[14][0].shape
+    # print 'all_boxes_cache[14][0][0]: ', all_boxes_cache[14][0][0]
+
+    # timers
+    _t = {'im_detect': Timer(), 'misc': Timer()}
+
+    roidb = imdb.roidb
+
+    for i in xrange(num_images):
+        _t['im_detect'].tic()
+        _t['im_detect'].toc()
+
+        _t['misc'].tic()
+        # skip j = 0, because it's the background class
+        # fuck skip
+        for j in xrange(0, imdb.num_classes):
+            # all_scores[j][i] = sum(scores[:, j])
+            all_scores[j][i] = sum(all_boxes_cache[j][i][:, -1])
+
+            # inds = np.where(scores[:, j] > thresh)[0]
+            # cls_scores = scores[inds, j]
+            inds = np.where(all_boxes_cache[j][i][:, -1] > thresh)[0]
+            cls_scores = all_boxes_cache[j][i][inds, -1]
+
+            # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
+            cls_boxes = all_boxes_cache[j][i][inds, 0:4]
+            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
+                .astype(np.float32, copy=False)
+
+            keep = nms(cls_dets, cfg.TEST.NMS)
+            cls_dets = cls_dets[keep, :]
+
+            all_boxes[j][i] = cls_dets
+
+        # Limit to max_per_image detections *over all classes*
+        if max_per_image > 0:
+            image_scores = np.hstack(
+                [all_boxes[j][i][:, -1] for j in xrange(0, imdb.num_classes)])
+            if len(image_scores) > max_per_image:
+                image_thresh = np.sort(image_scores)[-max_per_image]
+                for j in xrange(0, imdb.num_classes):
+                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
+                    all_boxes[j][i] = all_boxes[j][i][keep, :]
+        _t['misc'].toc()
+
+        print 'im_detect: {:d}/{:d} {:.3f}s {:.3f}s' \
+            .format(i + 1, num_images, _t['im_detect'].average_time,
+                    _t['misc'].average_time)
+
+    det_file = os.path.join(output_dir, 'detections.pkl')
+    with open(det_file, 'wb') as f:
+        cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
+
+    print 'Evaluating detections'
+    imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
+
+
+def test_net_ensemble2(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
+    print 'max_per_image: ', max_per_image
+    print 'thresh: ', thresh
+
+    num_images = len(imdb.image_index)
+    # all detections are collected into:
+    #    all_boxes[cls][image] = N x 5 array of detections in
+    #    (x1, y1, x2, y2, score)
+    all_boxes = [[[] for _ in xrange(num_images)]
+                 for _ in xrange(imdb.num_classes)]
+    all_scores = [[[] for _ in xrange(num_images)]
+                  for _ in xrange(imdb.num_classes)]
+
+    output_dir = get_output_dir(imdb, None)
+
+    # load all the detection results
+    # all_boxes_cache = None
+    all_boxes_cache = [[[] for _ in xrange(num_images)]
+                       for _ in xrange(imdb.num_classes)]
+    image_index = imdb.image_index
+    for det_dir in det_dirs:
+        p = 1.0
+        if '2' in det_dir:
+            p = 10.0
+        for dirpath, dirnames, filenames in os.walk(det_dir):
+            for filename in filenames:
+                print 'load res: ', os.path.join(dirpath, filename)
+                c = -1
+                for c_i, cls in enumerate(imdb.classes):
+                    if cls + '.txt' in filename:
+                        c = c_i
+                        break
+                assert c > -1
+                with open(os.path.join(dirpath, filename), 'r') as f:
+                    for line in f.readlines():
+                        line = line.strip()
+                        im_id, score, xmin, ymin, xmax, ymax = line.split(' ')
+                        im_i = image_index.index(im_id)
+                        all_boxes_cache[c][im_i].append([
+                            float(xmin) - 1,
+                            float(ymin) - 1,
+                            float(xmax) - 1,
+                            float(ymax) - 1,
+                            float(score) * p
+                        ])
+
+    for n in xrange(num_images):
+        for c in xrange(imdb.num_classes):
+            if len(all_boxes_cache[c][n]) == 0:
+                all_boxes_cache[c][n] = np.zeros((0, 5), dtype=np.float32)
+            else:
+                all_boxes_cache[c][n] = np.array(
+                    all_boxes_cache[c][n], dtype=np.float32)
 
     print 'all_boxes_cache: ', len(all_boxes_cache), len(all_boxes_cache[0])
     print 'all_boxes_cache[0][0]: ', all_boxes_cache[0][0].shape

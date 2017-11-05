@@ -18,11 +18,11 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
     use_relu = True
 
     # Add additional convolutional layers.
-    # 32 x 32
+    # 19 x 19
     from_layer = net.keys()[-1]
 
     # TODO(weiliu89): Construct the name using the last layer to avoid duplication.
-    # 16 x 16
+    # 10 x 10
     out_layer = "conv6_1"
     ConvBNLayer(
         net,
@@ -50,7 +50,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         2,
         lr_mult=lr_mult)
 
-    # 8 x 8
+    # 5 x 5
     from_layer = out_layer
     out_layer = "conv7_1"
     ConvBNLayer(
@@ -79,7 +79,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         2,
         lr_mult=lr_mult)
 
-    # 4 x 4
+    # 3 x 3
     from_layer = out_layer
     out_layer = "conv8_1"
     ConvBNLayer(
@@ -104,11 +104,11 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         use_relu,
         256,
         3,
+        0,
         1,
-        2,
         lr_mult=lr_mult)
 
-    # 2 x 2
+    # 1 x 1
     from_layer = out_layer
     out_layer = "conv9_1"
     ConvBNLayer(
@@ -133,36 +133,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
         use_relu,
         256,
         3,
-        1,
-        2,
-        lr_mult=lr_mult)
-
-    # 1 x 1
-    from_layer = out_layer
-    out_layer = "conv10_1"
-    ConvBNLayer(
-        net,
-        from_layer,
-        out_layer,
-        use_batchnorm,
-        use_relu,
-        128,
-        1,
         0,
-        1,
-        lr_mult=lr_mult)
-
-    from_layer = out_layer
-    out_layer = "conv10_2"
-    ConvBNLayer(
-        net,
-        from_layer,
-        out_layer,
-        use_batchnorm,
-        use_relu,
-        256,
-        4,
-        1,
         1,
         lr_mult=lr_mult)
 
@@ -170,25 +141,24 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
 
 
 ### Modify the following parameters accordingly ###
+# Notice: we do evaluation by setting the solver parameters approximately.
+# The reason that we do not use ./build/tools/caffe test ... is because it
+# only supports testing for classification problem now.
 # The directory which contains the caffe code.
 # We assume you are running the script at the CAFFE_ROOT.
 caffe_root = os.getcwd()
 
 # Set true if you want to start training right after generating all files.
-run_soon = False
-# Set true if you want to load from most recently saved snapshot.
-# Otherwise, we will load from the pretrain_model defined below.
-resume_training = True
-# If true, Remove old model files.
-remove_old_models = False
+run_soon = True
 
-# The database file for training data. Created by data/VOC2007/create_data.sh
-train_data = "data/VOC2007/lmdb/VOC2007_trainval_lmdb"
-# The database file for testing data. Created by data/VOC2007/create_data.sh
-test_data = "data/VOC2007/lmdb/VOC2007_test_lmdb"
+YEAR = sys.argv[1]
+# The database file for training data. Created by data/VOC{}/create_data.sh
+train_data = "data/VOC{}/lmdb/VOC{}_trainval_lmdb".format(YEAR, YEAR)
+# The database file for testing data. Created by data/VOC{}/create_data.sh
+test_data = "data/VOC{}/lmdb/VOC{}_test_lmdb".format(YEAR, YEAR)
 # Specify the batch sampler.
-resize_width = 512
-resize_height = 512
+resize_width = 300
+resize_height = 300
 resize = "{}x{}".format(resize_width, resize_height)
 batch_sampler = [
     {
@@ -338,22 +308,22 @@ else:
     # A learning rate for batch_size = 1, num_gpus = 1.
     base_lr = 0.00004
 
-# Modify the job name if you want.
+# The job name should be same as the name used in examples/ssd/ssd_pascal.py.
 # job_name = "SSD_{}".format(resize)
-job_name = sys.argv[1]
+job_name = sys.argv[2]
 # The name of the model. Modify it if you want.
-# model_name = "VGG_VOC2007_{}".format(job_name)
-model_name = "VGG_VOC2007"
+# model_name = "VGG_VOC{}_{}".format(YEAR,job_name)
+model_name = "VGG_VOC{}".format(YEAR)
 
 # Directory which stores the model .prototxt file.
-save_dir = "output/{}".format(job_name)
-# Directory which stores the snapshot of models.
+save_dir = "output/{}_score_test".format(job_name)
+# Directory which stores the snapshot of trained models.
 snapshot_dir = "output/{}".format(job_name)
 # Directory which stores the job script and log file.
-job_dir = "experiments/logs/{}".format(job_name)
+job_dir = "experiments/logs/{}_score_test".format(job_name)
 # Directory which stores the detection results.
-output_result_dir = "{}/data/VOCdevkit/results/VOC2007/{}/Main".format(
-    os.environ['HOME'], job_name)
+output_result_dir = "data/VOCdevkit{}/results/VOC{}/Main/{}_score_test/".format(
+    YEAR, YEAR, job_name)
 
 # model definition files.
 train_net_file = "{}/train.prototxt".format(save_dir)
@@ -364,15 +334,26 @@ solver_file = "{}/solver.prototxt".format(save_dir)
 snapshot_prefix = "{}/{}".format(snapshot_dir, model_name)
 # job script path.
 job_file = "{}/{}.sh".format(job_dir, model_name)
-# readme path.
-readme_file = "{}/README.md".format(job_dir)
 
-# Stores the test image names and sizes. Created by data/VOC2007/create_list.sh
-name_size_file = "data/VOC2007/test_name_size.txt"
-# The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
-pretrain_model = "../../data/imagenet_/VGGNet/VGG_ILSVRC_16_layers_fc_reduced.caffemodel"
+# Find most recent snapshot.
+max_iter = 0
+for file in os.listdir(snapshot_dir):
+    if file.endswith(".caffemodel"):
+        basename = os.path.splitext(file)[0]
+        iter = int(basename.split("{}_iter_".format(model_name))[1])
+        if iter > max_iter:
+            max_iter = iter
+
+if max_iter == 0:
+    print("Cannot find snapshot in {}".format(snapshot_dir))
+    sys.exit()
+
+# Stores the test image names and sizes. Created by data/VOC{}/create_list.sh
+name_size_file = "data/VOC{}/test_name_size.txt".format(YEAR)
+# The resume model.
+pretrain_model = "{}_iter_{}.caffemodel".format(snapshot_prefix, max_iter)
 # Stores LabelMapItem.
-label_map_file = "data/VOC2007/labelmap_voc.prototxt"
+label_map_file = "data/VOC{}/labelmap_voc.prototxt".format(YEAR)
 
 # MultiBoxLoss parameters.
 num_classes = 21
@@ -408,19 +389,18 @@ loss_param = {
 
 # parameters for generating priors.
 # minimum dimension of input image
-min_dim = 512
-# conv4_3 ==> 64 x 64
-# fc7 ==> 32 x 32
-# conv6_2 ==> 16 x 16
-# conv7_2 ==> 8 x 8
-# conv8_2 ==> 4 x 4
-# conv9_2 ==> 2 x 2
-# conv10_2 ==> 1 x 1
+min_dim = 300
+# conv4_3 ==> 38 x 38
+# fc7 ==> 19 x 19
+# conv6_2 ==> 10 x 10
+# conv7_2 ==> 5 x 5
+# conv8_2 ==> 3 x 3
+# conv9_2 ==> 1 x 1
 mbox_source_layers = [
-    'conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2', 'conv10_2'
+    'conv4_3', 'fc7', 'conv6_2', 'conv7_2', 'conv8_2', 'conv9_2'
 ]
 # in percent %
-min_ratio = 15
+min_ratio = 20
 max_ratio = 90
 step = int(math.floor((max_ratio - min_ratio) / (len(mbox_source_layers) - 2)))
 min_sizes = []
@@ -428,12 +408,12 @@ max_sizes = []
 for ratio in xrange(min_ratio, max_ratio + 1, step):
     min_sizes.append(min_dim * ratio / 100.)
     max_sizes.append(min_dim * (ratio + step) / 100.)
-min_sizes = [min_dim * 7 / 100.] + min_sizes
-max_sizes = [min_dim * 15 / 100.] + max_sizes
-steps = [8, 16, 32, 64, 128, 256, 512]
-aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]]
+min_sizes = [min_dim * 10 / 100.] + min_sizes
+max_sizes = [min_dim * 20 / 100.] + max_sizes
+steps = [8, 16, 32, 64, 100, 300]
+aspect_ratios = [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
 # L2 normalize conv4_3.
-normalizations = [20, -1, -1, -1, -1, -1, -1]
+normalizations = [20, -1, -1, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
     prior_variance = [0.1, 0.1, 0.2, 0.2]
@@ -444,15 +424,14 @@ clip = False
 
 # Solver parameters.
 # Defining which GPUs to use.
-# gpus = "0,1,2,3"
 # gpus = "0"
-gpus = sys.argv[2]
+gpus = sys.argv[3]
 gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
-# Divide the mini-batch to different GPUs.
-batch_size = 8
-accum_batch_size = 32
+# The number does not matter since we do not do training with this script.
+batch_size = 1
+accum_batch_size = 1
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
 device_id = 0
@@ -475,7 +454,15 @@ elif normalization_mode == P.Loss.FULL:
     base_lr *= 2000.
 
 # Evaluate on whole test set.
-num_test_image = 4952
+if int(YEAR) == 2007:
+    num_test_image = 4952
+elif int(YEAR) == 2010:
+    num_test_image = 9637
+elif int(YEAR) == 2012:
+    num_test_image = 10991
+else:
+    print('unknow year: {}'.format(YEAR))
+    exit(0)
 test_batch_size = 8
 # Ideally test_batch_size should be divisible by num_test_image,
 # otherwise mAP will be slightly off the true value.
@@ -490,21 +477,21 @@ solver_param = {
     'gamma': 0.1,
     'momentum': 0.9,
     'iter_size': iter_size,
-    'max_iter': 120000,
-    'snapshot': 10000,
+    'max_iter': 0,
+    'snapshot': 0,
     'display': 10,
     'average_loss': 10,
     # 'type': "SGD",
     'solver_mode': solver_mode,
     'device_id': device_id,
     'debug_info': False,
-    'snapshot_after_train': True,
+    'snapshot_after_train': False,
     # Test parameters
     'test_iter': [test_iter],
     'test_interval': 10000,
     'eval_type': "detection",
     'ap_version': "11point",
-    'test_initialization': False,
+    'test_initialization': True,
     'show_per_class_result': True,
 }
 
@@ -517,9 +504,11 @@ det_out_param = {
         'nms_threshold': 0.45,
         'top_k': 400
     },
+    # To test the inference speed, we need comment save_out_param,
+    # as the output IO will influence the speed.
     'save_output_param': {
         'output_directory': output_result_dir,
-        'output_name_prefix': "comp4_det_test_",
+        'output_name_prefix': "comp3_det_test_",
         'output_format': "VOC",
         'label_map_file': label_map_file,
         'name_size_file': name_size_file,
@@ -528,6 +517,8 @@ det_out_param = {
     'keep_top_k': 200,
     'confidence_threshold': 0.01,
     'code_type': code_type,
+    # 'visualize': True,
+    'visualize': False,
 }
 
 # parameters for evaluating detection results.
@@ -551,19 +542,14 @@ make_if_not_exist(snapshot_dir)
 
 # Create train net.
 net = caffe.NetSpec()
-# net.data, net.label = CreateAnnotatedDataLayer(
-# train_data,
-# batch_size=batch_size_per_device,
-# train=True,
-# output_label=True,
-# label_map_file=label_map_file,
-# transform_param=train_transform_param,
-# batch_sampler=batch_sampler)
-net.data, net.label = L.Python(
-    ntop=2,
-    module='anno_data_layer.layer',
-    layer='AnnotatedDataLayer',
-    param_str="'num_classes': 20")
+net.data, net.label = CreateAnnotatedDataLayer(
+    train_data,
+    batch_size=batch_size_per_device,
+    train=True,
+    output_label=True,
+    label_map_file=label_map_file,
+    transform_param=train_transform_param,
+    batch_sampler=batch_sampler)
 
 VGGNetBody(
     net,
@@ -663,9 +649,11 @@ elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
     net[sigmoid_name] = L.Sigmoid(net[conf_name])
     mbox_layers[1] = net[sigmoid_name]
 
+mbox_layers.append(net.data)
 net.detection_out = L.DetectionOutput(
     *mbox_layers,
     detection_output_param=det_out_param,
+    transform_param=test_transform_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))
 net.detection_eval = L.DetectionEvaluate(
     net.detection_out,
@@ -704,53 +692,21 @@ with open(solver_file, 'w') as f:
     print(solver, file=f)
 shutil.copy(solver_file, job_dir)
 
-max_iter = 0
-# Find most recent snapshot.
-for file in os.listdir(snapshot_dir):
-    if file.endswith(".solverstate"):
-        basename = os.path.splitext(file)[0]
-        iter = int(basename.split("{}_iter_".format(model_name))[1])
-        if iter > max_iter:
-            max_iter = iter
-
-train_src_param = '--weights="{}" \\\n'.format(pretrain_model)
-if resume_training:
-    if max_iter > 0:
-        train_src_param = '--snapshot="{}_iter_{}.solverstate" \\\n'.format(
-            snapshot_prefix, max_iter)
-
-if remove_old_models:
-    # Remove any snapshots smaller than max_iter.
-    for file in os.listdir(snapshot_dir):
-        if file.endswith(".solverstate"):
-            basename = os.path.splitext(file)[0]
-            iter = int(basename.split("{}_iter_".format(model_name))[1])
-            if max_iter > iter:
-                os.remove("{}/{}".format(snapshot_dir, file))
-        if file.endswith(".caffemodel"):
-            basename = os.path.splitext(file)[0]
-            iter = int(basename.split("{}_iter_".format(model_name))[1])
-            if max_iter > iter:
-                os.remove("{}/{}".format(snapshot_dir, file))
-
 # Create job file.
 with open(job_file, 'w') as f:
     f.write('cd {}\n'.format(caffe_root))
     f.write('./caffe-fwsl/build/tools/caffe train \\\n')
     f.write('--solver="{}" \\\n'.format(solver_file))
-    f.write(train_src_param)
+    f.write('--weights="{}" \\\n'.format(pretrain_model))
     if solver_param['solver_mode'] == P.Solver.GPU:
-        f.write('--gpu {} 2>&1 | tee {}/{}.log\n'.format(
-            gpus, job_dir, model_name))
+        f.write('--gpu {} 2>&1 | tee {}/{}_test{}.log\n'.format(
+            gpus, job_dir, model_name, max_iter))
     else:
         f.write('2>&1 | tee {}/{}.log\n'.format(job_dir, model_name))
 
 # Copy the python script to job_dir.
 py_file = os.path.abspath(__file__)
 shutil.copy(py_file, job_dir)
-
-f = open(readme_file, 'w')
-f.close()
 
 # Run the job.
 os.chmod(job_file, stat.S_IRWXU)

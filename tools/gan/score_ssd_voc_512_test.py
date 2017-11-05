@@ -180,10 +180,11 @@ caffe_root = os.getcwd()
 # Set true if you want to start training right after generating all files.
 run_soon = True
 
-# The database file for training data. Created by data/VOC2007/create_data.sh
-train_data = "data/VOC2007/lmdb/VOC2007_test_lmdb"
-# The database file for testing data. Created by data/VOC2007/create_data.sh
-test_data = "data/VOC2007/lmdb/VOC2007_trainval_lmdb"
+YEAR = sys.argv[1]
+# The database file for training data. Created by data/VOC{}/create_data.sh
+train_data = "data/VOC{}/lmdb/VOC{}_trainval_lmdb".format(YEAR, YEAR)
+# The database file for testing data. Created by data/VOC{}/create_data.sh
+test_data = "data/VOC{}/lmdb/VOC{}_test_lmdb".format(YEAR, YEAR)
 # Specify the batch sampler.
 resize_width = 512
 resize_height = 512
@@ -338,20 +339,20 @@ else:
 
 # The job name should be same as the name used in examples/ssd/ssd_pascal.py.
 # job_name = "SSD_{}".format(resize)
-job_name = sys.argv[1]
+job_name = sys.argv[2]
 # The name of the model. Modify it if you want.
-# model_name = "VGG_VOC2007_{}".format(job_name)
-model_name = "VGG_VOC2007"
+# model_name = "VGG_VOC{}_{}".format(YEAR,job_name)
+model_name = "VGG_VOC{}".format(YEAR)
 
 # Directory which stores the model .prototxt file.
-save_dir = "output/{}_score_trainval".format(job_name)
+save_dir = "output/{}_score_test".format(job_name)
 # Directory which stores the snapshot of trained models.
 snapshot_dir = "output/{}".format(job_name)
 # Directory which stores the job script and log file.
-job_dir = "experiments/logs/{}_score_trainval".format(job_name)
+job_dir = "experiments/logs/{}_score_test".format(job_name)
 # Directory which stores the detection results.
-output_result_dir = "{}/data/VOCdevkit/results/VOC2007/{}_score_trainval/Main".format(
-    os.environ['HOME'], job_name)
+output_result_dir = "data/VOCdevkit{}/results/VOC{}/Main/{}_score_test/".format(
+    YEAR, YEAR, job_name)
 
 # model definition files.
 train_net_file = "{}/train.prototxt".format(save_dir)
@@ -376,12 +377,12 @@ if max_iter == 0:
     print("Cannot find snapshot in {}".format(snapshot_dir))
     sys.exit()
 
-# Stores the test image names and sizes. Created by data/VOC2007/create_list.sh
-name_size_file = "data/VOC2007/trainval_name_size.txt"
+# Stores the test image names and sizes. Created by data/VOC{}/create_list.sh
+name_size_file = "data/VOC{}/test_name_size.txt".format(YEAR)
 # The resume model.
 pretrain_model = "{}_iter_{}.caffemodel".format(snapshot_prefix, max_iter)
 # Stores LabelMapItem.
-label_map_file = "data/VOC2007/labelmap_voc.prototxt"
+label_map_file = "data/VOC{}/labelmap_voc.prototxt".format(YEAR)
 
 # MultiBoxLoss parameters.
 num_classes = 21
@@ -454,7 +455,7 @@ clip = False
 # Solver parameters.
 # Defining which GPUs to use.
 # gpus = "0"
-gpus = sys.argv[2]
+gpus = sys.argv[3]
 gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
@@ -483,8 +484,18 @@ elif normalization_mode == P.Loss.FULL:
     base_lr *= 2000.
 
 # Evaluate on whole test set.
-num_test_image = 5011
+if int(YEAR) == 2007:
+    num_test_image = 4952
+elif int(YEAR) == 2010:
+    num_test_image = 9637
+elif int(YEAR) == 2012:
+    num_test_image = 10991
+else:
+    print('unknow year: {}'.format(YEAR))
+    exit(0)
 test_batch_size = 8
+# Ideally test_batch_size should be divisible by num_test_image,
+# otherwise mAP will be slightly off the true value.
 test_iter = int(math.ceil(float(num_test_image) / test_batch_size))
 
 solver_param = {
@@ -521,19 +532,23 @@ det_out_param = {
     'background_label_id': background_label_id,
     'nms_param': {
         'nms_threshold': 0.45,
-        'top_k': 2048
+        'top_k': 400
     },
+    # To test the inference speed, we need comment save_out_param,
+    # as the output IO will influence the speed.
     'save_output_param': {
         'output_directory': output_result_dir,
-        'output_name_prefix': "comp4_det_trainval_",
+        'output_name_prefix': "comp3_det_test_",
         'output_format': "VOC",
         'label_map_file': label_map_file,
         'name_size_file': name_size_file,
         'num_test_image': num_test_image,
     },
-    'keep_top_k': 2048,
-    'confidence_threshold': 0.0001,
+    'keep_top_k': 200,
+    'confidence_threshold': 0.01,
     'code_type': code_type,
+    # 'visualize': True,
+    'visualize': False,
 }
 
 # parameters for evaluating detection results.
@@ -664,9 +679,11 @@ elif multibox_loss_param["conf_loss_type"] == P.MultiBoxLoss.LOGISTIC:
     net[sigmoid_name] = L.Sigmoid(net[conf_name])
     mbox_layers[1] = net[sigmoid_name]
 
+mbox_layers.append(net.data)
 net.detection_out = L.DetectionOutput(
     *mbox_layers,
     detection_output_param=det_out_param,
+    transform_param=test_transform_param,
     include=dict(phase=caffe_pb2.Phase.Value('TEST')))
 net.detection_eval = L.DetectionEvaluate(
     net.detection_out,

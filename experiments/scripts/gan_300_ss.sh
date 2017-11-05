@@ -34,14 +34,18 @@ case $DATASET in
 		PT_DIR="pascal_voc"
 		ITERS=20
 		ITERS2=10
+		ITERS3=1
+		ITERS4=1000
 		YEAR="2007"
 		;;
 	pascal_voc10)
 		TRAIN_IMDB="voc_2010_trainval"
 		TEST_IMDB="voc_2010_test"
 		PT_DIR="pascal_voc"
-		ITERS=10
-		ITERS2=10
+		ITERS=20
+		ITERS2=0
+		ITERS3=1
+		ITERS4=10000
 		YEAR="2010"
 		;;
 	pascal_voc12)
@@ -50,6 +54,8 @@ case $DATASET in
 		PT_DIR="pascal_voc"
 		ITERS=20
 		ITERS2=10
+		ITERS3=1
+		ITERS4=1000
 		YEAR="2012"
 		;;
 	pascal_voc07+12)
@@ -84,14 +90,8 @@ echo ---------------------------------------------------------------------
 
 
 start=false
-for step in {0..10}
+for step in {0..11}
 do
-	if [ ${step} == 1 ]
-	then
-		echo "###############################################################################"
-		echo "START POINT"
-		start=true
-	fi
 
 	echo "###############################################################################"
 	echo "current step: ${step}"
@@ -112,14 +112,15 @@ do
 
 	echo "###############################################################################"
 	echo "TRAIN F:"
-	if [ "$start" = true  ]
+	if [ ${step} == 0  ]
 	then
-		if [ ${step} == 0  ]
+
+		if [ "$start" = true  ]
 		then
-			weights=data/imagenet_models/${NET}.v2.caffemodel
+			F=data/imagenet_models/${NET}.v2
 			time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
 				--solver models/${PT_DIR}/${NET}/cpg/solver.prototxt \
-				--weights ${weights} \
+				--weights ${F}.caffemodel \
 				--imdb ${TRAIN_IMDB} \
 				--iters ${ITERS} \
 				--cfg experiments/cfgs/cpg.yml \
@@ -128,25 +129,43 @@ do
 				USE_FEEDBACK ${use_feedback} \
 				FEEDBACK_DIR "${feedback_dir_trainval}" \
 				FEEDBACK_NUM ${feedback_num}
-
-			weights=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_iter_${ITERS}.caffemodel
-		else
-			weights=output/${EXP_DIR}/cpg/$((${step}-1))/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}.caffemodel
 		fi
+		F=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_iter_${ITERS}
 
-
-		time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
-			--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
-			--weights ${weights} \
-			--imdb ${TRAIN_IMDB} \
-			--iters ${ITERS2} \
-			--cfg experiments/cfgs/cpg.yml \
-			${EXTRA_ARGS} \
-			EXP_DIR ${EXP_DIR}/cpg/${step} \
-			USE_FEEDBACK ${use_feedback} \
-			FEEDBACK_DIR "${feedback_dir_trainval}" \
-			FEEDBACK_NUM ${feedback_num}
-
+		if [ ${ITERS2} -gt 0 ]
+		then
+			if [ "$start" = true  ]
+			then
+				time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
+					--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
+					--weights ${F}.caffemodel \
+					--imdb ${TRAIN_IMDB} \
+					--iters ${ITERS2} \
+					--cfg experiments/cfgs/cpg.yml \
+					${EXTRA_ARGS} \
+					EXP_DIR ${EXP_DIR}/cpg/${step} \
+					USE_FEEDBACK ${use_feedback} \
+					FEEDBACK_DIR "${feedback_dir_trainval}" \
+					FEEDBACK_NUM ${feedback_num}
+			fi
+			F=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}
+		fi
+	else
+		if [ "$start" = true  ]
+		then
+			time ./tools/wsl/train_net.py --gpu ${GPU_ID} \
+				--solver models/${PT_DIR}/${NET}/cpg/solver2.prototxt \
+				--weights ${F}.caffemodel \
+				--imdb ${TRAIN_IMDB} \
+				--iters ${ITERS3} \
+				--cfg experiments/cfgs/cpg.yml \
+				${EXTRA_ARGS} \
+				EXP_DIR ${EXP_DIR}/cpg/${step} \
+				USE_FEEDBACK ${use_feedback} \
+				FEEDBACK_DIR "${feedback_dir_trainval}" \
+				FEEDBACK_NUM ${feedback_num}
+		fi
+		F=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS3}
 	fi
 
 
@@ -154,8 +173,6 @@ do
 	echo "TEST F:"
 	if [ "$start" = true  ]
 	then
-		NET_FINAL=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}.caffemodel
-
 		#use_feedback=False
 		#feedback_dir_test=""
 		#feedback_dir_trainval=""
@@ -163,7 +180,7 @@ do
 
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-			--net ${NET_FINAL} \
+			--net ${F}.caffemodel \
 			--imdb ${TEST_IMDB} \
 			--cfg experiments/cfgs/cpg.yml \
 			${EXTRA_ARGS} \
@@ -175,7 +192,7 @@ do
 
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
-			--net ${NET_FINAL} \
+			--net ${F}.caffemodel \
 			--imdb ${TRAIN_IMDB} \
 			--cfg experiments/cfgs/cpg.yml \
 			${EXTRA_ARGS} \
@@ -188,47 +205,52 @@ do
 
 	echo "###############################################################################"
 	echo "TRAIN G:"
+	python ./tools/gan/ssd_voc_300.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+
+	if [ ${step} == 0  ]
+	then
+		G=data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced
+	fi
+
 	if [ "$start" = true  ]
 	then
-		python ./tools/gan/ssd_voc_512.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-
-		if [ ${step} == 0  ]
-		then
-			weights=data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel
-		else
-			weights=output/${EXP_DIR}/ssd/$((${step}-1))/VGG_VOC${YEAR}_iter_10000.caffemodel
-		fi
-		weights=data/imagenet_models/VGG_ILSVRC_16_layers_fc_reduced.caffemodel
-
 		echo ---------------------------------------------------------------------
 		echo showing the solver file:
 		cat "output/${EXP_DIR}/ssd/${step}/solver.prototxt"
 		echo ---------------------------------------------------------------------
 		time ./tools/ssd/train_net.py --gpu ${GPU_ID} \
 			--solver output/${EXP_DIR}/ssd/${step}/solver.prototxt \
-			--weights ${weights} \
+			--weights ${G}.caffemodel \
 			--imdb ${TRAIN_IMDB} \
-			--iters ${ITERS} \
-			--cfg experiments/cfgs/gan_ssd_512.yml \
+			--iters ${ITERS4} \
+			--cfg experiments/cfgs/gan_ssd_300.yml \
 			${EXTRA_ARGS} \
-			TRAIN.PSEUDO_PATH output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS2}/detections_o.pkl
+			TRAIN.PSEUDO_PATH ${F}/detections_o.pkl
 	fi
+	G=output/${EXP_DIR}/ssd/${step}/VGG_VOC${YEAR}_iter_${ITERS4}
 
+	if [ ${step} == 0 ]
+	then
+		echo "###############################################################################"
+		echo "START POINT"
+		start=true
+	fi
 
 	echo "###############################################################################"
 	echo "TEST G:"
 	if [ "$start" = true  ]
 	then
-		python ./tools/gan/score_ssd_voc_512_test_feedback.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-		python ./tools/gan/score_ssd_voc_512_trainval_feedback.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-		python ./tools/gan/score_ssd_voc_512_test.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-		python ./tools/gan/score_ssd_voc_512_trainval.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+		python ./tools/gan/score_ssd_voc_300_test.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+		python ./tools/gan/score_ssd_voc_300_trainval.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
 
 		dir_trainval=data/VOCdevkit${YEAR}/results/VOC${YEAR}/Main/${EXP_DIR}/ssd/${step}_score_trainval/
 		dir_eval=data/VOCdevkit${YEAR}/results/VOC${YEAR}/Main/
 		cp $dir_trainval/* $dir_eval
-		rename -f -v "s/comp3_det_/comp3_F_det_/g" ${dir_eval}/*
-		python tools/eval.py --salt F
+		rename -f -v "s/comp3_det_/comp3_G_det_/g" ${dir_eval}/*
+		python tools/eval.py --salt G --imdb ${TRAIN_IMDB}
+
+		python ./tools/gan/score_ssd_voc_300_test_feedback.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+		python ./tools/gan/score_ssd_voc_300_trainval_feedback.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
 	fi
 
 done

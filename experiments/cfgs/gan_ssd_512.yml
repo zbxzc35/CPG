@@ -4,7 +4,8 @@ TRAIN:
         IMS_PER_BATCH: 8
         ROIS_PER_IM: 2048
         SNAPSHOT_ITERS: 1
-        USE_PREFETCH: True
+        # 512有一个奇怪的BUG，导致不能使用PREFETCH
+        USE_PREFETCH: False
         PROPOSAL_METHOD: pseudo_gt
         ASPECT_GROUPING: False
 
