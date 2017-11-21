@@ -87,8 +87,8 @@ class pascal_voc(imdb):
             'Path does not exist: {}'.format(self._data_path)
 
         # test split of PASCAL VOC >2007
-        # if 'test' in self._name and int(self._year) > 2007:
-            # return
+        if 'test' in self._name and int(self._year) > 2007:
+            return
 
         self._gt_classes = {
             ix: self._load_pascal_classes_annotation(ix)
@@ -125,8 +125,8 @@ class pascal_voc(imdb):
         print 'left image number:', len(self._image_index)
 
         # test split of PASCAL VOC >2007
-        # if 'test' in self._name and int(self._year) > 2007:
-            # return
+        if 'test' in self._name and int(self._year) > 2007:
+            return
 
         self._gt_classes = {
             ix: self._load_pascal_classes_annotation(ix)
