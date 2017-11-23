@@ -211,7 +211,7 @@ do
 
 	echo "###############################################################################"
 	echo "TRAIN G:"
-	python ./tools/gan/ssd_voc_300.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
+	python ./tools/gan/ssd_voc_300.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}" ${ITERS_G}
 
 	if [ ${step} == 0  ]
 	then
