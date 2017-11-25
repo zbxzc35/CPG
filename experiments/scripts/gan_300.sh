@@ -34,8 +34,8 @@ case $DATASET in
 		PT_DIR="pascal_voc"
 		ITERS=20
 		ITERS2=10
-		ITERS_G=1
-		ITERS_F=1000
+		ITERS_F=1
+		ITERS_G=1000
 		YEAR="2007"
 		;;
 	pascal_voc10)
@@ -55,7 +55,7 @@ case $DATASET in
 		ITERS=20
 		ITERS2=0
 		ITERS_F=1
-		ITERS_G=10000
+		ITERS_G=1000
 		YEAR="2012"
 		;;
 	pascal_voc07+12)
@@ -83,6 +83,8 @@ LOG=`echo "$LOG" | sed 's/\[//g' | sed 's/\]//g'`
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
+RANDOM=6
+
 echo ---------------------------------------------------------------------
 git log -1
 git submodule foreach 'git log -1'
@@ -92,12 +94,6 @@ echo ---------------------------------------------------------------------
 start=false
 for step in {0..11}
 do
-	if [ ${step} == 0 ]
-	then
-		echo "###############################################################################"
-		echo "START POINT"
-		start=true
-	fi
 
 	echo "###############################################################################"
 	echo "current step: ${step}"
@@ -167,9 +163,12 @@ do
 				--cfg experiments/cfgs/cpg.yml \
 				${EXTRA_ARGS} \
 				EXP_DIR ${EXP_DIR}/cpg/${step} \
+				RNG_SEED ${RANDOM} \
 				USE_FEEDBACK ${use_feedback} \
 				FEEDBACK_DIR "${feedback_dir_trainval}" \
 				FEEDBACK_NUM ${feedback_num}
+		else
+			echo ${RANDOM}
 		fi
 		F=output/${EXP_DIR}/cpg/${step}/${TRAIN_IMDB}/${NET}_2_iter_${ITERS_F}
 	fi
@@ -179,11 +178,6 @@ do
 	echo "TEST F:"
 	if [ "$start" = true  ]
 	then
-		#use_feedback=False
-		#feedback_dir_test=""
-		#feedback_dir_trainval=""
-		#feedback_num=0
-
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
 			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
 			--net ${F}.caffemodel \
@@ -208,6 +202,12 @@ do
 			FEEDBACK_NUM ${feedback_num}
 	fi
 
+	if [ ${step} == 0 ]
+	then
+		echo "###############################################################################"
+		echo "START POINT"
+		start=true
+	fi
 
 	echo "###############################################################################"
 	echo "TRAIN G:"
@@ -251,7 +251,6 @@ do
 
 		python ./tools/gan/score_ssd_voc_300_test_feedback.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
 		python ./tools/gan/score_ssd_voc_300_trainval_feedback.py ${YEAR} ${EXP_DIR}/ssd/${step} "${GPU_ID}"
-		exit
 	fi
 
 done

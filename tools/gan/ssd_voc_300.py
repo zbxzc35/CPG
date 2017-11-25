@@ -453,7 +453,7 @@ test_batch_size = 8
 # otherwise mAP will be slightly off the true value.
 test_iter = int(math.ceil(float(num_test_image) / test_batch_size))
 
-max_iters = sys.argv[4]
+max_iters = int(sys.argv[4])
 solver_param = {
     # Train parameters
     'base_lr': base_lr,
