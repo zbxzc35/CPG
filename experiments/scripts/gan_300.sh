@@ -178,7 +178,8 @@ do
 	echo "TEST F:"
 	if [ "$start" = true  ]
 	then
-		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
+		#some_cmd > some_file 2>&1 &
+		time ./tools/wsl/test_net.py --gpu ${2} \
 			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
 			--net ${F}.caffemodel \
 			--imdb ${TEST_IMDB} \
@@ -187,7 +188,8 @@ do
 			EXP_DIR ${EXP_DIR}/cpg/${step} \
 			USE_FEEDBACK ${use_feedback} \
 			FEEDBACK_DIR "${feedback_dir_test}" \
-			FEEDBACK_NUM ${feedback_num}
+			FEEDBACK_NUM ${feedback_num} \
+			> experiments/logs/${EXP_DIR}/cpg_test_${step}.txt 2>&1 &
 
 
 		time ./tools/wsl/test_net.py --gpu ${GPU_ID} \
