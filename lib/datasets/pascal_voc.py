@@ -242,7 +242,7 @@ class pascal_voc(imdb):
         else:
             raise Exception('Unknown mode.')
 
-        threshold = 0.9
+        threshold = 1.0
 
         gt_roidb = []
         blacklist = []

@@ -84,6 +84,7 @@ exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
 RANDOM=6
+STEP=11
 
 echo ---------------------------------------------------------------------
 git log -1
@@ -92,8 +93,14 @@ echo ---------------------------------------------------------------------
 
 
 start=false
-for step in {0..11}
+for step in `seq 0 $STEP`
 do
+	if [ ${step} == 0 ]
+	then
+		echo "###############################################################################"
+		echo "START POINT"
+		start=true
+	fi
 
 	echo "###############################################################################"
 	echo "current step: ${step}"
@@ -179,7 +186,7 @@ do
 	if [ "$start" = true  ]
 	then
 		#some_cmd > some_file 2>&1 &
-		time ./tools/wsl/test_net.py --gpu ${2} \
+		time ./tools/wsl/test_net.py --gpu 2 \
 			--def models/${PT_DIR}/${NET}/cpg/test.prototxt \
 			--net ${F}.caffemodel \
 			--imdb ${TEST_IMDB} \
@@ -204,12 +211,6 @@ do
 			FEEDBACK_NUM ${feedback_num}
 	fi
 
-	if [ ${step} == 0 ]
-	then
-		echo "###############################################################################"
-		echo "START POINT"
-		start=true
-	fi
 
 	echo "###############################################################################"
 	echo "TRAIN G:"
@@ -233,7 +234,10 @@ do
 			--iters ${ITERS_G} \
 			--cfg experiments/cfgs/gan_ssd_300.yml \
 			${EXTRA_ARGS} \
+			RNG_SEED ${RANDOM} \
 			TRAIN.PSEUDO_PATH ${F}/detections_o.pkl
+	else
+		echo ${RANDOM}
 	fi
 	G=output/${EXP_DIR}/ssd/${step}/VGG_VOC${YEAR}_iter_${ITERS_G}
 
