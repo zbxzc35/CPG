@@ -498,10 +498,34 @@ class pascal_voc(imdb):
 
         box_list = []
         score_list = []
-        for i in xrange(raw_bboxes.shape[0]):
-            box_list.append(raw_bboxes[i][:, (1, 0, 3, 2)] - 1)
-            score_list.append(raw_scores[i][:, :])
+        total_roi = 0
+        up_1024 = 0
+        up_2048 = 0
+        up_3072 = 0
+        up_4096 = 0
 
+        for i in xrange(raw_bboxes.shape[0]):
+            boxes = raw_bboxes[i][:, (1, 0, 3, 2)] - 1
+            scores = raw_scores[i][:, :]
+
+            total_roi += boxes.shape[0]
+            if boxes.shape[0] > 1024:
+                up_1024 += 1
+            if boxes.shape[0] > 2048:
+                up_2048 += 1
+            if boxes.shape[0] > 3072:
+                up_3072 += 1
+            if boxes.shape[0] > 4096:
+                up_4096 += 1
+
+            box_list.append(boxes)
+            score_list.append(scores)
+
+        print 'total_roi: ', total_roi, ' ave roi: ', total_roi / len(box_list)
+        print 'up_1024: ', up_1024
+        print 'up_2048: ', up_2048
+        print 'up_3072: ', up_3072
+        print 'up_4096: ', up_4096
         return self.create_roidb_from_box_list(box_list, gt_roidb, score_list)
 
     def _load_edge_boxes_roidb_orig(self, gt_roidb):
