@@ -505,8 +505,24 @@ class pascal_voc(imdb):
         up_4096 = 0
 
         for i in xrange(raw_bboxes.shape[0]):
+            if i % 1000 == 0:
+                print '{:d} / {:d}'.format(i + 1, len(self._image_index))
+
             boxes = raw_bboxes[i][:, (1, 0, 3, 2)] - 1
             scores = raw_scores[i][:, :]
+
+            keep = ds_utils.unique_boxes(boxes)
+            boxes = boxes[keep, :]
+            scores = scores[keep]
+
+            keep = ds_utils.filter_small_boxes(boxes, self.config['min_size'])
+            boxes = boxes[keep, :]
+            scores = scores[keep]
+
+            # sort by confidence
+            sorted_ind = np.argsort(-scores.flatten())
+            scores = scores[sorted_ind, :]
+            boxes = boxes[sorted_ind, :]
 
             total_roi += boxes.shape[0]
             if boxes.shape[0] > 1024:
@@ -658,6 +674,7 @@ class pascal_voc(imdb):
         # TODO(YH): current we do not use cache, due to num_classes is different
         # cache_file = os.path.join(self.cache_path,
         # self.name + '_mcg_roidb.pkl')
+
         # if os.path.exists(cache_file):
         # with open(cache_file, 'rb') as fid:
         # roidb = cPickle.load(fid)

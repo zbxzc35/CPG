@@ -7,18 +7,19 @@ TRAIN:
         USE_DISTORTION: True
         SNAPSHOT_ITERS: 1
         USE_PREFETCH: True
-        PROPOSAL_METHOD: mcg
+        PROPOSAL_METHOD: selective_search
         ASPECT_GROUPING: False
         OPG_CACHE: False
 
 TEST:
         SCALES: [480, 576, 688, 864, 1200]
         MAX_SIZE: 2000
+        ROIS_PER_IM: 2048
         NMS: 0.5
-        PROPOSAL_METHOD: mcg
+        PROPOSAL_METHOD: selective_search
 RNG_SEED: 6
 EXP_DIR: contextlocnet_x
 CONTEXT: True
-USE_ROI_SCORE: True
+USE_ROI_SCORE: False
 USE_BG: False
 WSL: True

@@ -1,8 +1,8 @@
 name: "VGG_ILSVRC_16_layers"
 input: "data" input_shape { dim: 1 dim: 3 dim: 224 dim: 224 }
 input: "rois" input_shape { dim: 1 dim: 5 }
-input: "rois_context" input_shape { dim: 1 dim: 9 }
-input: "rois_frame" input_shape { dim: 1 dim: 9 }
+input: "roi_context" input_shape { dim: 1 dim: 9 }
+input: "roi_frame" input_shape { dim: 1 dim: 9 }
 input: "roi_scores" input_shape { dim: 1 }
 input: "roi_num" input_shape { dim: 1 }
 
@@ -55,9 +55,9 @@ layer { name: "relu5_3" type: "ReLU" bottom: "conv5_3" top: "conv5_3" }
 #------------------------------------ROI POOLING--------------------------------------------------------------
 layer { name: "roi_pool_conv5" type: "ROIPooling" bottom: "conv5_3" bottom: "rois" top: "roi_pool_conv5"
 	roi_pooling_param { pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
-layer { name: "context_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "rois_context" top: "context_pool_conv5"
+layer { name: "context_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "roi_context" top: "context_pool_conv5"
 	loop_roi_pooling_param {pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
-layer { name: "frame_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "rois_frame" top: "frame_pool_conv5"
+layer { name: "frame_pool_conv5" type: "LoopROIPooling" bottom: "conv5_3" bottom: "roi_frame" top: "frame_pool_conv5"
 	loop_roi_pooling_param {pooled_w: 7 pooled_h: 7 spatial_scale: 0.0625 }}
 
 #------------------------------------ROI SCORE BOOSTING-------------------------------------------------------
