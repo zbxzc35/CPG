@@ -508,8 +508,22 @@ class pascal_voc(imdb):
             if i % 1000 == 0:
                 print '{:d} / {:d}'.format(i + 1, len(self._image_index))
 
-            boxes = raw_bboxes[i][:, (1, 0, 3, 2)] - 1
-            scores = raw_scores[i][:, :]
+            img_size = PIL.Image.open(self.image_path_at(i)).size
+
+            # boxes = raw_bboxes[i][:, (1, 0, 3, 2)] - 1
+            # scores = raw_scores[i][:, :]
+
+            boxes = raw_bboxes[i].astype(np.uint16) - 1
+            scores = raw_scores[i].astype(np.float)
+
+            boxes = boxes[:, (1, 0, 3, 2)]
+
+            assert (boxes[:, 0] >= 0).all()
+            assert (boxes[:, 1] >= 0).all()
+            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            assert (boxes[:, 3] >= boxes[:, 1]).all()
+            assert (boxes[:, 2] < img_size[0]).all()
+            assert (boxes[:, 3] < img_size[1]).all()
 
             keep = ds_utils.unique_boxes(boxes)
             boxes = boxes[keep, :]
