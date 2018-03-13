@@ -156,8 +156,8 @@ layer { name: "loss_neg" type: "CrossEntropyLoss" bottom: "cls_neg" bottom: "lab
 
 #layer { name: "loss_center" type: "CenterLoss" bottom: "fc7" bottom: "labels" bottom: "bbox_score" top: "loss_center"
 #	param { lr_mult: 0 decay_mult: 0 }
-#	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 1 display: 1280 update: 128
-#	max_num_im_center: -1, center_filler { type: "gaussian" } ignore_label: 12}
+#	center_loss_param { debug_info: false lr: 0.5 top_k: 10 num_center: 3 display: 1280 update: 128
+#	max_num_im_center: -1, center_filler { type: "gaussian" } ignore_label: 12 }
 #	loss_weight: 0.4096 propagate_down: true propagate_down: false propagate_down: false }
 
 #-----------------------------------STATISTICS----------------------------------------------------------------
