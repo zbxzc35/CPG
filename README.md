@@ -128,6 +128,14 @@ cd $CPG_ROOT
 #   --set EXP_DIR seed_rng1701 RNG_SEED 1701
 ```
 
+Example:
+
+```Shell
+./experiments/scripts/cpg.sh 0 VGG16 pascal_voc --set EXP_DIR cpg
+```
+
+This will reproduction the VGG16 result in paper.
+
 Trained CPG networks are saved under:
 
 ```
