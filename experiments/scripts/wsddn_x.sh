@@ -45,7 +45,6 @@ case $DATASET in
 		TEST_IMDB="coco_2014_minival"
 		PT_DIR="coco"
 		ITERS=20
-		#ITERS=280000
 		;;
 	*)
 		echo "No dataset given"
