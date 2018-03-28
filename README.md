@@ -148,3 +148,25 @@ Test outputs are saved under:
 output/<experiment directory>/<dataset name>/<network snapshot name>/
 ```
 
+### Other method
+
+WSDDN:
+
+```Shell
+./experiments/scripts/wsddn.sh 0 VGG16 pascal_voc --set EXP_DIR wsddn
+```
+or
+```Shell
+./experiments/scripts/wsddn_x.sh 0 VGG16 pascal_voc --set EXP_DIR wsddn_x
+```
+
+ContextLocNet:
+
+```Shell
+./experiments/scripts/contextlocnet.sh 0 VGG16 pascal_voc --set EXP_DIR contextlocnet
+```
+or
+```Shell
+./experiments/scripts/contextlocnet_x.sh 0 VGG16 pascal_voc --set EXP_DIR contextlocnet_x
+```
+
