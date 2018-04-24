@@ -134,7 +134,7 @@ layer { name: "mil" type: "MIL" bottom: "labels" bottom: "cls_score" bottom: "ro
 	#cpg_blob_name: "conv4_3"
 	#cpg_blob_name: "conv5_3"
 	predict_blob_name: "cls_score"
-	predict_threshold: 0.7 predict_order: 0.0 crf_threshold: 0.95
+	predict_threshold: 0.8 predict_order: 0.0 crf_threshold: 0.95
 	mass_threshold: 0.2 density_threshold: 0.0 fg_threshold: 0.1 bg_threshold: 0.001 }}
 
 #-----------------------------------POOLING-------------------------------------------------------------------
