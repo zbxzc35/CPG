@@ -25,12 +25,12 @@ Object-Aware Spatial Constraint for Weakly Supervised Detection
 
 ### Requirements: hardware
 
-1. For training smaller networks (ZF, VGG_CNN_M_1024) a GPU with at least 6G of memory suffices
-2. For training lager networks with VGG16, you'll need a GPU with at least 11G of memory suffices
+1. For training smaller networks (VGG_CNN_F, VGG_CNN_M_1024), a GPU with about 6G of memory suffices.
+2. For training lager networks (VGG16), you'll need a GPU with about 8G of memory.
 
 ### Installation
 
-1. Clone the Faster R-CNN repository
+1. Clone the CPG repository
   ```Shell
   # Make sure to clone with --recursive
   git clone --recursive https://github.com/shenyunhang/CPG.git
@@ -91,7 +91,7 @@ Object-Aware Spatial Constraint for Weakly Supervised Detection
 8. Create symlinks for the PASCAL VOC dataset
 
 	```Shell
-    cd $FRCN_ROOT/data
+    cd $CPG_ROOT/data
     ln -s $VOCdevkit VOCdevkit2007
     ```
     Using symlinks is a good idea because you will likely want to share the same PASCAL dataset installation between multiple projects.
@@ -110,7 +110,7 @@ Object-Aware Spatial Constraint for Weakly Supervised Detection
 Pre-trained ImageNet models can be downloaded for the three networks described in the paper: ZF and VGG16.
 
 ```Shell
-cd $FRCN_ROOT
+cd $CPG_ROOT
 ./data/scripts/fetch_imagenet_models.sh
 ```
 
@@ -128,6 +128,14 @@ cd $CPG_ROOT
 #   --set EXP_DIR seed_rng1701 RNG_SEED 1701
 ```
 
+Example:
+
+```Shell
+./experiments/scripts/cpg.sh 0 VGG16 pascal_voc --set EXP_DIR cpg
+```
+
+This will reproduction the VGG16 result in paper.
+
 Trained CPG networks are saved under:
 
 ```
@@ -138,5 +146,27 @@ Test outputs are saved under:
 
 ```
 output/<experiment directory>/<dataset name>/<network snapshot name>/
+```
+
+### Other method
+
+WSDDN:
+
+```Shell
+./experiments/scripts/wsddn.sh 0 VGG16 pascal_voc --set EXP_DIR wsddn
+```
+or
+```Shell
+./experiments/scripts/wsddn_x.sh 0 VGG16 pascal_voc --set EXP_DIR wsddn_x
+```
+
+ContextLocNet:
+
+```Shell
+./experiments/scripts/contextlocnet.sh 0 VGG16 pascal_voc --set EXP_DIR contextlocnet
+```
+or
+```Shell
+./experiments/scripts/contextlocnet_x.sh 0 VGG16 pascal_voc --set EXP_DIR contextlocnet_x
 ```
 
