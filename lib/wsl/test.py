@@ -819,8 +819,7 @@ def test_net_ensemble2(det_dirs, imdb, max_per_image=100, thresh=0.000000001):
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
 
 
-def test_net_cache(net, imdb, max_per_image=1000, thresh=0.00000001,
-                   vis=False):
+def test_net_cache(net, imdb, max_per_image=100, thresh=0.000000001, vis=False, scale=1.0):
     """Test a network on an image database."""
     print 'max_per_image: ', max_per_image
     print 'thresh: ', thresh
@@ -878,6 +877,8 @@ def test_net_cache(net, imdb, max_per_image=1000, thresh=0.00000001,
 
             # cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
             cls_boxes = all_boxes_cache[j][i][inds, 0:4]
+            cls_boxes = resize_boxes(cls_boxes, scale)
+
             cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
                 .astype(np.float32, copy=False)
 
@@ -912,6 +913,24 @@ def test_net_cache(net, imdb, max_per_image=1000, thresh=0.00000001,
 
     print 'Evaluating detections'
     imdb.evaluate_detections(all_boxes, output_dir, all_scores=all_scores)
+
+
+def resize_boxes(boxes, scale):
+    center_x = (boxes[:, 0] + boxes[:, 2]) / 2
+    center_y = (boxes[:, 1] + boxes[:, 3]) / 2
+
+    width = boxes[:, 2] - boxes[:, 0]
+    height = boxes[:, 3] - boxes[:, 1]
+
+    re_width = width * scale
+    re_height = height * scale
+
+    boxes[:, 0] = center_x - re_width / 2
+    boxes[:, 2] = center_x + re_width / 2
+    boxes[:, 1] = center_y - re_height / 2
+    boxes[:, 3] = center_y + re_height / 2
+
+    return boxes
 
 
 def test_net_bbox(net, imdb, max_per_image=100, thresh=0.00000001, vis=False):
